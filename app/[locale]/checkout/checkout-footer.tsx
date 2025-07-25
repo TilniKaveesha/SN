@@ -13,7 +13,7 @@ export default function CheckoutFooter() {
         <Link href='/page/contact-us'>Contact Us</Link>{' '}
       </p>
       <p>
-        For an item ordered from {site.name}: When you click the 'Place
+        For an item ordered from {site.name}: When you click the &apos;Place
         Your Order&apos; button, we will send you an e-mail acknowledging
         receipt of your order. Your contract to purchase an item will not be
         complete until we send you an e-mail notifying you that the item has
