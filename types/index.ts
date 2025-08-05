@@ -2,6 +2,7 @@ import {
   CarouselSchema,
   CartSchema,
   DeliveryDateSchema,
+  faqFormSchema,
   OrderInputSchema,
   OrderItemSchema,
   PaymentMethodSchema,
@@ -74,6 +75,9 @@ export type IUserName = z.infer<typeof UserNameSchema>
 // webpage
 export type IWebPageInput = z.infer<typeof WebPageInputSchema>
 
+// FAQ
+export type IFaqInput = z.infer<typeof faqFormSchema>
+
 // setting
 export type ICarousel = z.infer<typeof CarouselSchema>
 export type ISettingInput = z.infer<typeof SettingInputSchema>
@@ -84,3 +88,44 @@ export type SiteLanguage = z.infer<typeof SiteLanguageSchema>
 export type SiteCurrency = z.infer<typeof SiteCurrencySchema>
 export type PaymentMethod = z.infer<typeof PaymentMethodSchema>
 export type DeliveryDate = z.infer<typeof DeliveryDateSchema>
+
+// New FAQ types
+export interface FAQ {
+  _id: string
+  question: string
+  answer: string
+  category: string
+  categorySlug: string
+  tags: string[]
+  isPublished: boolean
+  views: number
+  displayOrder: number
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface FAQCategory {
+  slug: string
+  title: string
+  description: string
+  icon?: string
+  faqCount: number
+}
+
+export interface PopularFAQ extends FAQ {
+  categoryTitle: string
+}
+
+// Form types
+export interface CreateFAQInput {
+  question: string
+  answer: string
+  category: string
+  tags: string[]
+  isPublished: boolean
+  displayOrder: number
+}
+
+export interface UpdateFAQInput extends Partial<CreateFAQInput> {
+  _id: string
+}
