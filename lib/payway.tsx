@@ -625,7 +625,7 @@ export const payway = {
               let extractedCheckoutUrl = null
 
               // Try to extract QR data from __NUXT_DATA__ script tag
-              const nuxtDataMatch = htmlContent.match(/<script[^>]*id="__NUXT_DATA__"[^>]*>(.*?)<\/script>/s)
+              const nuxtDataMatch = htmlContent.match(/<script[^>]*id="__NUXT_DATA__"[^>]*>(.*?)<\/script>/)
               if (nuxtDataMatch) {
                 try {
                   const nuxtData = JSON.parse(nuxtDataMatch[1])
