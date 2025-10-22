@@ -1,21 +1,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-'use client'
+"use client"
 
-import { Button } from '@/components/ui/button'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import useCartStore from '@/hooks/use-cart-store'
-import { useToast } from '@/hooks/use-toast'
-import { OrderItem } from '@/types'
-import { useTranslations } from 'next-intl'
-import { useRouter } from 'next/navigation'
-import { useState } from 'react'
-import { ShoppingCart, Zap } from 'lucide-react'
+import { Button } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import useCartStore from "@/hooks/use-cart-store"
+import { useToast } from "@/hooks/use-toast"
+import type { OrderItem } from "@/types"
+import { useTranslations } from "next-intl"
+import { useRouter } from "next/navigation"
+import { useState } from "react"
+import { ShoppingCart, Zap } from "lucide-react"
 
 export default function AddToCart({
   item,
@@ -29,29 +23,24 @@ export default function AddToCart({
 
   const { addItem } = useCartStore()
 
-  //PROMPT: add quantity state
   const [quantity, setQuantity] = useState(1)
 
   const t = useTranslations()
 
-    const handleAddToCart = () => {
+  const handleAddToCart = () => {
     try {
       addItem(item, quantity)
       toast({
-        description: t('Added to Cart'),
+        description: t("Added to Cart"),
         action: (
-          <Button
-            variant="secondary"
-            className="ml-2"
-            onClick={() => router.push('/cart')}
-          >
+          <Button variant="secondary" className="ml-2" onClick={() => router.push("/cart")}>
             View Cart
           </Button>
         ),
       })
     } catch (error: any) {
       toast({
-        variant: 'destructive',
+        variant: "destructive",
         description: error.message,
       })
     }
@@ -60,21 +49,17 @@ export default function AddToCart({
   const handleBuyNow = () => {
     try {
       addItem(item, quantity)
-      router.push('/checkout')
+      router.push("/checkout")
     } catch (error: any) {
       toast({
-        variant: 'destructive',
+        variant: "destructive",
         description: error.message,
       })
     }
   }
 
-
   return minimal ? (
-    <Button
-      className="rounded-full w-auto px-6 gap-2"
-      onClick={handleAddToCart}
-    >
+    <Button className="rounded-full w-auto px-6 gap-2" onClick={handleAddToCart}>
       <ShoppingCart className="h-4 w-4" />
       Add to Cart
     </Button>
@@ -82,10 +67,7 @@ export default function AddToCart({
     <div className="w-full space-y-4">
       <div className="flex items-center gap-4">
         <span className="text-sm font-medium">Quantity:</span>
-        <Select
-          value={quantity.toString()}
-          onValueChange={(i) => setQuantity(Number(i))}
-        >
+        <Select value={quantity.toString()} onValueChange={(i) => setQuantity(Number(i))}>
           <SelectTrigger className="w-24">
             <SelectValue placeholder="Select" />
           </SelectTrigger>
@@ -103,21 +85,21 @@ export default function AddToCart({
         <Button
           className="rounded-lg h-12 gap-2 hover:shadow-md transition-shadow"
           onClick={async () => {
-          try {
-            const itemId = await addItem(item, quantity)
-            router.push(`/cart/${itemId}`)
-          } catch (error: any) {
-            toast({
-              variant: 'destructive',
-              description: error.message,
-            })
-          }
-        }}
+            try {
+              const itemId = await addItem(item, quantity)
+              router.push(`/cart/${itemId}`)
+            } catch (error: any) {
+              toast({
+                variant: "destructive",
+                description: error.message,
+              })
+            }
+          }}
         >
           <ShoppingCart className="h-4 w-4" />
           Add to Cart
         </Button>
-        
+
         <Button
           variant="default"
           className="rounded-lg h-12 gap-2 bg-emerald-600 hover:bg-emerald-700 hover:shadow-md transition-shadow"
@@ -129,9 +111,7 @@ export default function AddToCart({
       </div>
 
       {item.countInStock < 10 && (
-        <div className="text-xs text-amber-600 mt-1">
-          Only {item.countInStock} left in stock!
-        </div>
+        <div className="text-xs text-amber-600 mt-1">Only {item.countInStock} left in stock!</div>
       )}
     </div>
   )

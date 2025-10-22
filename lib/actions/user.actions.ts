@@ -1,16 +1,16 @@
-'use server'
+"use server"
 
-import bcrypt from 'bcryptjs'
-import { auth, signIn, signOut } from '@/auth'
-import { IUserName, IUserSignIn, IUserSignUp } from '@/types'
-import { UserSignUpSchema, UserUpdateSchema } from '../validator'
-import { connectToDatabase } from '../db'
-import User, { IUser } from '../db/models/user.model'
-import { formatError } from '../utils'
-import { redirect } from 'next/navigation'
-import { revalidatePath } from 'next/cache'
-import { z } from 'zod'
-import { getSetting } from './setting.actions'
+import bcrypt from "bcryptjs"
+import { auth, signIn, signOut } from "@/auth"
+import type { IUserName, IUserSignIn, IUserSignUp } from "@/types"
+import { UserSignUpSchema, type UserUpdateSchema } from "../validator"
+import { connectToDatabase } from "../db"
+import User, { type IUser } from "../db/models/user.model"
+import { formatError } from "../utils"
+import { redirect } from "next/navigation"
+import { revalidatePath } from "next/cache"
+import type { z } from "zod"
+import { getSetting } from "./setting.actions"
 
 // CREATE
 export async function registerUser(userSignUp: IUserSignUp) {
@@ -27,7 +27,7 @@ export async function registerUser(userSignUp: IUserSignUp) {
       ...user,
       password: await bcrypt.hash(user.password, 5),
     })
-    return { success: true, message: 'User created successfully' }
+    return { success: true, message: "User created successfully" }
   } catch (error) {
     return { success: false, error: formatError(error) }
   }
@@ -39,11 +39,11 @@ export async function deleteUser(id: string) {
   try {
     await connectToDatabase()
     const res = await User.findByIdAndDelete(id)
-    if (!res) throw new Error('Use not found')
-    revalidatePath('/admin/users')
+    if (!res) throw new Error("Use not found")
+    revalidatePath("/admin/users")
     return {
       success: true,
-      message: 'User deleted successfully',
+      message: "User deleted successfully",
     }
   } catch (error) {
     return { success: false, message: formatError(error) }
@@ -55,15 +55,15 @@ export async function updateUser(user: z.infer<typeof UserUpdateSchema>) {
   try {
     await connectToDatabase()
     const dbUser = await User.findById(user._id)
-    if (!dbUser) throw new Error('User not found')
+    if (!dbUser) throw new Error("User not found")
     dbUser.name = user.name
     dbUser.email = user.email
     dbUser.role = user.role
     const updatedUser = await dbUser.save()
-    revalidatePath('/admin/users')
+    revalidatePath("/admin/users")
     return {
       success: true,
-      message: 'User updated successfully',
+      message: "User updated successfully",
       data: JSON.parse(JSON.stringify(updatedUser)),
     }
   } catch (error) {
@@ -75,12 +75,12 @@ export async function updateUserName(user: IUserName) {
     await connectToDatabase()
     const session = await auth()
     const currentUser = await User.findById(session?.user?.id)
-    if (!currentUser) throw new Error('User not found')
+    if (!currentUser) throw new Error("User not found")
     currentUser.name = user.name
     const updatedUser = await currentUser.save()
     return {
       success: true,
-      message: 'User updated successfully',
+      message: "User updated successfully",
       data: JSON.parse(JSON.stringify(updatedUser)),
     }
   } catch (error) {
@@ -89,10 +89,10 @@ export async function updateUserName(user: IUserName) {
 }
 
 export async function signInWithCredentials(user: IUserSignIn) {
-  return await signIn('credentials', { ...user, redirect: false })
+  return await signIn("credentials", { ...user, redirect: false })
 }
 export const SignInWithGoogle = async () => {
-  await signIn('google')
+  await signIn("google")
 }
 export const SignOut = async () => {
   const redirectTo = await signOut({ redirect: false })
@@ -114,10 +114,7 @@ export async function getAllUsers({
   await connectToDatabase()
 
   const skipAmount = (Number(page) - 1) * limit
-  const users = await User.find()
-    .sort({ createdAt: 'desc' })
-    .skip(skipAmount)
-    .limit(limit)
+  const users = await User.find().sort({ createdAt: "desc" }).skip(skipAmount).limit(limit)
   const usersCount = await User.countDocuments()
   return {
     data: JSON.parse(JSON.stringify(users)) as IUser[],
@@ -128,6 +125,53 @@ export async function getAllUsers({
 export async function getUserById(userId: string) {
   await connectToDatabase()
   const user = await User.findById(userId)
-  if (!user) throw new Error('User not found')
+  if (!user) throw new Error("User not found")
   return JSON.parse(JSON.stringify(user)) as IUser
+}
+
+export async function saveCustomerDetails(customerDetails: {
+  fullName: string
+  street: string
+  city: string
+  province: string
+  postalCode: string
+  country: string
+  phone: string
+}) {
+  try {
+    const session = await auth()
+    if (!session?.user?.id) throw new Error("User not authenticated")
+
+    await connectToDatabase()
+    const user = await User.findById(session.user.id)
+    if (!user) throw new Error("User not found")
+
+    user.customerDetails = customerDetails
+    await user.save()
+
+    return {
+      success: true,
+      message: "Customer details saved successfully",
+    }
+  } catch (error) {
+    return { success: false, message: formatError(error) }
+  }
+}
+
+export async function getCustomerDetails() {
+  try {
+    const session = await auth()
+    if (!session?.user?.id) return { success: false, data: null }
+
+    await connectToDatabase()
+    const user = await User.findById(session.user.id)
+    if (!user) throw new Error("User not found")
+
+    return {
+      success: true,
+      data: user.customerDetails || null,
+    }
+  } catch (error) {
+    return { success: false, message: formatError(error), data: null }
+  }
 }
