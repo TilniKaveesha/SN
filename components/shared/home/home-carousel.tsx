@@ -124,7 +124,7 @@ export function HomeCarousel({ items }: { items: ICarousel[] }) {
                   {/* Content */}
                   <div className="absolute top-1/2 left-4 md:left-20 -translate-y-1/2 z-20 max-w-[90%] md:max-w-[40%]">
                     <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white drop-shadow-lg mb-4 md:mb-6 animate-in slide-in-from-left-8 duration-700">
-                      {t(item.title)}
+                      {(item.title)}
                     </h2>
                     <Button
                       className="bg-tk-accent hover:bg-tk-accent/90 text-white font-medium tracking-wide 
