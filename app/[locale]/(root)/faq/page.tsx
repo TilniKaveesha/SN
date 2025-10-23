@@ -153,7 +153,7 @@ export default async function FaqPage() {
                 <MessageCircle className="h-6 w-6 text-blue-600" />
               </div>
               <CardTitle className="text-lg">Live Chat</CardTitle>
-              <CardDescription>Get instant help from our support team</CardDescription>
+              <CardDescription>Get instant help from our Telegram and Whatsapp</CardDescription>
             </CardHeader>
           </Card>
           <Card className="flex-1 max-w-sm">
