@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { ChevronUp, ChevronDown, Facebook, Twitter, Instagram } from "lucide-react"
+import { ChevronUp, Facebook, Twitter, Instagram } from "lucide-react"
 import { Button } from "../ui/button"
 import Link from "next/link"
 import { APP_NAME } from "@/lib/constants"
@@ -14,7 +14,6 @@ interface FooterData {
 
 export default function Footer() {
   const [data, setData] = useState<FooterData>({})
-  const [expandedFaq, setExpandedFaq] = useState(false)
 
   useEffect(() => {
     async function fetchFooterData() {
@@ -79,27 +78,16 @@ export default function Footer() {
 
             {/* FAQ & Guides */}
             <div>
-              <button
-                onClick={() => setExpandedFaq(!expandedFaq)}
-                className="flex items-center justify-between w-full text-gray-900 text-base font-semibold mb-3 hover:text-gray-700 transition-colors"
-                aria-expanded={expandedFaq}
-              >
-                FAQ & Guides
-                <ChevronDown className={`h-4 w-4 transition-transform ${expandedFaq ? "rotate-180" : ""}`} />
-              </button>
-              <div
-                className={`overflow-hidden transition-all duration-300 ${expandedFaq ? "max-h-96 opacity-100" : "max-h-0 opacity-0"}`}
-              >
-                <ul className="space-y-2">
-                  {faqCategories.map((category) => (
-                    <li key={category.href}>
-                      <Link href={category.href} className="hover:text-gray-900 hover:underline block">
-                        {category.title}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              <h3 className="text-gray-900 text-base font-semibold mb-3">FAQ & Guides</h3>
+              <ul className="space-y-2">
+                {faqCategories.map((category) => (
+                  <li key={category.href}>
+                    <Link href={category.href} className="hover:text-gray-900 hover:underline block">
+                      {category.title}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
             </div>
 
             {/* Contact Info */}
