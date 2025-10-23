@@ -1,5 +1,6 @@
-import { IOrderInput } from '@/types'
-import { Document, Model, model, models, Schema } from 'mongoose'
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import type { IOrderInput } from "@/types"
+import { type Document, type Model, model, models, Schema } from "mongoose"
 
 export interface IOrder extends Document, IOrderInput {
   _id: string
@@ -7,18 +8,25 @@ export interface IOrder extends Document, IOrderInput {
   updatedAt: Date
 }
 
+interface PaymentResult {
+  id: string
+  status: string
+  email_address: string
+  pricePaid?: string
+}
+
 const orderSchema = new Schema<IOrder>(
   {
     user: {
       type: Schema.Types.ObjectId as unknown as typeof String,
-      ref: 'User',
+      ref: "User",
       required: true,
     },
     items: [
       {
         product: {
           type: Schema.Types.ObjectId,
-          ref: 'Product',
+          ref: "Product",
           required: true,
         },
         clientId: { type: String, required: true },
@@ -44,7 +52,12 @@ const orderSchema = new Schema<IOrder>(
     },
     expectedDeliveryDate: { type: Date, required: true },
     paymentMethod: { type: String, required: true },
-    paymentResult: { id: String, status: String, email_address: String },
+    paymentResult: {
+      id: { type: String, required: true },
+      status: { type: String, required: true },
+      email_address: { type: String, required: true },
+      pricePaid: { type: String },
+    },
     itemsPrice: { type: Number, required: true },
     shippingPrice: { type: Number, required: true },
     taxPrice: { type: Number, required: true },
@@ -57,10 +70,9 @@ const orderSchema = new Schema<IOrder>(
   },
   {
     timestamps: true,
-  }
+  },
 )
 
-const Order =
-  (models.Order as Model<IOrder>) || model<IOrder>('Order', orderSchema)
+const Order = (models.Order as Model<IOrder>) || model<IOrder>("Order", orderSchema)
 
 export default Order
