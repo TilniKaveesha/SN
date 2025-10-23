@@ -2,8 +2,9 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Search, HelpCircle, MessageCircle, Phone, Mail } from "lucide-react"
+import { Search, HelpCircle, MessageCircle, Phone, Mail, Shield, Download, FileText } from "lucide-react"
 import { getFaqCategories, getPopularFaqs } from "@/lib/actions/faq.actions"
+import { UserProtectionPolicy } from "@/components/policy/user-protection-policy"
 import Link from "next/link"
 
 export const metadata = {
@@ -39,6 +40,44 @@ export default async function FaqPage() {
             placeholder="Search for answers..."
             className="pl-10 pr-4 py-3 text-lg border-2 border-gray-200 focus:border-blue-500 rounded-lg"
           />
+        </div>
+      </div>
+
+      <div className="mb-16 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-8 border border-blue-200">
+        <div className="flex items-start gap-4">
+          <div className="p-3 bg-blue-100 rounded-full flex-shrink-0">
+            <Shield className="h-6 w-6 text-blue-600" />
+          </div>
+          <div className="flex-1">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">User Protection & Refund Policy</h2>
+            <p className="text-gray-700 mb-6">
+              We are committed to protecting your rights as a customer. Our comprehensive user protection and refund
+              policy ensures transparency and trust in all transactions.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3">
+              {/* Direct PDF Link */}
+              <a
+                href="/policies/user-protection-refund-policy.pdf"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <FileText className="h-5 w-5" />
+                View PDF
+              </a>
+              {/* Download Link */}
+              <a
+                href="/policies/user-protection-refund-policy.pdf"
+                download="user-protection-refund-policy.pdf"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-white text-blue-600 font-semibold rounded-lg border-2 border-blue-600 hover:bg-blue-50 transition-colors"
+              >
+                <Download className="h-5 w-5" />
+                Download PDF
+              </a>
+              {/* Modal View */}
+              <UserProtectionPolicy />
+            </div>
+          </div>
         </div>
       </div>
 

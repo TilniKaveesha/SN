@@ -78,7 +78,7 @@ export default function Footer() {
 
             {/* FAQ & Guides */}
             <div>
-              <h3 className="text-gray-900 text-base font-semibold mb-3">FAQ & Guides</h3>
+              <Link href="/faq" className="text-gray-900 text-base font-semibold mb-3">FAQ & Guides</Link>
               <ul className="space-y-2">
                 {faqCategories.map((category) => (
                   <li key={category.href}>

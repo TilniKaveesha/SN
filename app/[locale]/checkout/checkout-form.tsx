@@ -253,7 +253,7 @@ const CheckoutForm = ({ userEmail, savedCustomerDetails }: CheckoutFormProps) =>
                 {shippingPrice === undefined ? (
                   "--"
                 ) : shippingPrice === 0 ? (
-                  "FREE"
+                  "Pickup"
                 ) : (
                   <ProductPrice price={shippingPrice} plain />
                 )}
