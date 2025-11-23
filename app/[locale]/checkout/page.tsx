@@ -15,7 +15,9 @@ export default async function CheckoutPage() {
   }
 
   const customerDetailsResult = await getCustomerDetails()
-  const savedCustomerDetails = customerDetailsResult.success ? customerDetailsResult.data : null
+  const savedCustomerDetails = customerDetailsResult.success
+    ? JSON.parse(JSON.stringify(customerDetailsResult.data))
+    : null
 
   return <CheckoutForm userEmail={session.user.email || ""} savedCustomerDetails={savedCustomerDetails} />
 }

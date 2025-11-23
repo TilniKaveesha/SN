@@ -1,0 +1,27 @@
+{
+  "name": "@my-org/aba-payway-pkg",
+  "version": "1.0.0",
+  "description": "ABA Payway QR Integration for Next.js",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch"
+  },
+  "dependencies": {
+    "crypto": "^1.0.1"
+  },
+  "peerDependencies": {
+    "next": ">=14.0.0",
+    "react": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.24",
+    "tsup": "^8.1.0",
+    "typescript": "^5.5.3"
+  }
+}

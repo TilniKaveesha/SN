@@ -21,7 +21,7 @@ import Link from "next/link"
 import useCartStore from "@/hooks/use-cart-store"
 import useSettingStore from "@/hooks/use-setting-store"
 import ProductPrice from "@/components/shared/product/product-price"
-import PayWayCheckout from "@/components/payway/payway-checkout"
+import PayWayCheckout from "@/components/payway/payway-qr-checkout" // updated to use the new Payway QR checkout component
 import { saveCustomerDetails } from "@/lib/actions/user.actions"
 
 const shippingAddressDefaultValues =
@@ -146,39 +146,6 @@ const CheckoutForm = ({ userEmail, savedCustomerDetails }: CheckoutFormProps) =>
       })
       clearCart()
       router.push(`/checkout/${res.data?.orderId}`)
-    }
-  }
-
-  const handlePayWayOrder = async () => {
-    setIsPayWayProcessing(true)
-
-    try {
-      const orderRes = await createOrder({
-        items,
-        shippingAddress,
-        expectedDeliveryDate: calculateFutureDate(availableDeliveryDates[deliveryDateIndex!].daysToDeliver),
-        deliveryDateIndex,
-        paymentMethod: "PayWay",
-        itemsPrice,
-        shippingPrice,
-        taxPrice,
-        totalPrice,
-      })
-
-      if (!orderRes.success) {
-        throw new Error(orderRes.message)
-      }
-
-      clearCart()
-      router.push(`/checkout/${orderRes.data?.orderId}`)
-    } catch (error) {
-      toast({
-        description: error instanceof Error ? error.message : "Order creation failed",
-        variant: "destructive",
-      })
-    } finally {
-      setIsPayWayProcessing(false)
-      setShowPayWayCheckout(false)
     }
   }
 
@@ -509,22 +476,9 @@ const CheckoutForm = ({ userEmail, savedCustomerDetails }: CheckoutFormProps) =>
                   {showPayWayCheckout && paymentMethod === "PayWay" ? (
                     <div className="w-full">
                       <PayWayCheckout
-                        orderId={`temp_${Date.now()}`}
+                        orderId={`temp${Date.now()}`}
                         amount={totalPrice}
-                        customerInfo={{
-                          name: shippingAddress?.fullName || "",
-                          email: userEmail || "customer@example.com",
-                          phone: shippingAddress?.phone || "",
-                        }}
-                        onSuccess={() => handlePayWayOrder()}
-                        onError={(error: string) => {
-                          toast({
-                            title: "Payment Failed",
-                            description: error,
-                            variant: "destructive",
-                          })
-                          setShowPayWayCheckout(false)
-                        }}
+                        currency="USD"
                         onCancel={() => setShowPayWayCheckout(false)}
                       />
                     </div>

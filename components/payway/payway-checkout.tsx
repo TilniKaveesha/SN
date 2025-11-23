@@ -9,11 +9,11 @@ import PayWayHtmlDebug from "./payway-html-debug"
 import PayWayPopup from "./payway-popup"
 import Image from "next/image"
 
-interface PaywayCheckoutProps {
+export interface PaywayCheckoutProps {
   orderId: string
   amount: number
   currency?: string
-  customerInfo: {
+  customerInfo?: {
     name: string
     email: string
     phone: string
