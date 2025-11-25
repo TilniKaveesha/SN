@@ -266,9 +266,9 @@ export async function createPayWayOrder(orderId: string) {
 
       if (paywayOrder.success) {
         order.paymentResult = {
-          id: paywayOrder.transaction_ref,
-          email_address: customerInfo.email,
+          id: paywayOrder.transaction_ref || orderId,
           status: "pending",
+          email_address: customerInfo.email || "",
           pricePaid: "0",
         }
         await order.save()
@@ -305,10 +305,10 @@ export async function verifyPayWayPayment(orderId: string, tran_id: string) {
       order.isPaid = true
       order.paidAt = new Date()
       order.paymentResult = {
-        id: paymentData.tran_id,
+        id: paymentData.tran_id || tran_id,
         status: "completed",
-        email_address: paymentData.email || order.paymentResult?.email_address || "",
-        pricePaid: paymentData.amount?.toString() || "0",
+        email_address: paymentData.email || order.paymentResult?.email_address || (order.user as any)?.email || "",
+        pricePaid: paymentData.amount?.toString() || order.totalPrice.toString() || "0",
       }
       await order.save()
       await sendPurchaseReceipt({ order })
@@ -362,9 +362,9 @@ export async function createPayWayPaymentLink(orderId: string) {
     if (result.success) {
       // Store payment link info in order
       order.paymentResult = {
-        id: result.data.payment_link_id,
-        email_address: customerInfo.email,
+        id: result.data.payment_link_id || orderId,
         status: "pending",
+        email_address: customerInfo.email || "",
         pricePaid: "0",
       }
       await order.save()
@@ -399,12 +399,7 @@ export const calcDeliveryDateAndPrice = async ({
 
   const deliveryDate =
     availableDeliveryDates[deliveryDateIndex === undefined ? availableDeliveryDates.length - 1 : deliveryDateIndex]
-  const shippingPrice =
-    !shippingAddress || !deliveryDate
-      ? undefined
-      : deliveryDate.freeShippingMinPrice > 0 && itemsPrice >= deliveryDate.freeShippingMinPrice
-        ? 0
-        : deliveryDate.shippingPrice
+  const shippingPrice = 0 //fixed free shipping
 
   const taxPrice = !shippingAddress ? undefined : round2(itemsPrice * 0.15)
   const totalPrice = round2(

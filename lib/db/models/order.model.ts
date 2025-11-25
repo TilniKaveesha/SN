@@ -11,7 +11,7 @@ export interface IOrder extends Document, IOrderInput {
 interface PaymentResult {
   id: string
   status: string
-  email_address: string
+  email_address?: string
   pricePaid?: string
 }
 
@@ -53,10 +53,10 @@ const orderSchema = new Schema<IOrder>(
     expectedDeliveryDate: { type: Date, required: true },
     paymentMethod: { type: String, required: true },
     paymentResult: {
-      id: { type: String, required: true },
-      status: { type: String, required: true },
-      email_address: { type: String, required: true },
-      pricePaid: { type: String },
+      id: { type: String, required: false },
+      status: { type: String, required: false },
+      email_address: { type: String, required: false }, // made email_address optional
+      pricePaid: { type: String, required: false },
     },
     itemsPrice: { type: Number, required: true },
     shippingPrice: { type: Number, required: true },

@@ -906,6 +906,92 @@ export const payway = {
     }
   },
 
+  checkTransaction: async function checkTransaction(tran_id: string) {
+    const url = "https://checkout-sandbox.payway.com.kh/api/payment-gateway/v1/payments/check-transaction-2"
+    const req_time = new Date().toISOString().replace(/[-:T]/g, "").slice(0, 14)
+    const merchant_id = process.env.PAYWAY_MERCHANT_ID!
+
+    const hashString = req_time + merchant_id + tran_id
+    const hash = crypto.createHmac("sha512", process.env.PAYWAY_API_KEY!).update(hashString).digest("base64")
+
+    try {
+      const formData = new FormData()
+      formData.append("req_time", req_time)
+      formData.append("merchant_id", merchant_id)
+      formData.append("tran_id", tran_id)
+      formData.append("hash", hash)
+
+      console.log("[PayWay] Checking transaction status via Check Transaction API v2:", {
+        tran_id,
+        merchant_id,
+        req_time,
+      })
+
+      const response = await fetch(url, {
+        method: "POST",
+        body: formData,
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        const statusCode = result.status?.code
+        const paymentStatusCode = result.data?.payment_status_code
+
+        console.log("[PayWay] Check Transaction API v2 response:", {
+          statusCode,
+          paymentStatusCode,
+          paymentStatus: result.data?.payment_status,
+        })
+
+        // Map payment_status_code to our status format
+        let status = "PENDING"
+        switch (paymentStatusCode) {
+          case 0: // APPROVED, PRE-AUTH
+            status = "PAID"
+            break
+          case 2: // PENDING
+            status = "PENDING"
+            break
+          case 3: // DECLINED
+            status = "FAILED"
+            break
+          case 4: // REFUNDED
+            status = "REFUNDED"
+            break
+          case 7: // CANCELLED
+            status = "FAILED"
+            break
+          default:
+            status = "PENDING"
+        }
+
+        return {
+          success: isPayWaySuccess(statusCode),
+          status: status,
+          payment_status: result.data?.payment_status,
+          payment_status_code: paymentStatusCode,
+          message: result.status?.message || getPayWayStatusMessage(statusCode),
+          total_amount: result.data?.total_amount,
+          payment_amount: result.data?.payment_amount,
+          payment_currency: result.data?.payment_currency,
+          apv: result.data?.apv,
+          transaction_date: result.data?.transaction_date,
+          refund_amount: result.data?.refund_amount,
+          discount_amount: result.data?.discount_amount,
+          tran_id: result.status?.tran_id || tran_id,
+          raw_response: result,
+        }
+      } else {
+        const errorText = await response.text()
+        console.error("[PayWay] Check Transaction API v2 Error:", response.status, errorText)
+        throw new Error(`PayWay Check Transaction Error: ${response.status} - ${errorText}`)
+      }
+    } catch (error) {
+      console.error("[PayWay] checkTransaction error:", error)
+      throw error
+    }
+  },
+
   // Helper method to validate payment options
   validatePaymentOption: function validatePaymentOption(option: string): boolean {
     return Object.values(PayWayPaymentOption).includes(option as PayWayPaymentOption)

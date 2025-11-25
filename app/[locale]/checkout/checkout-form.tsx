@@ -116,10 +116,42 @@ const CheckoutForm = ({ userEmail, savedCustomerDetails }: CheckoutFormProps) =>
 
   const [isPayWayProcessing, setIsPayWayProcessing] = useState(false)
   const [showPayWayCheckout, setShowPayWayCheckout] = useState(false)
+  const [realOrderId, setRealOrderId] = useState("")
 
   const handlePlaceOrder = async () => {
     if (paymentMethod === "PayWay") {
-      setShowPayWayCheckout(true)
+      setIsPayWayProcessing(true)
+      try {
+        const res = await createOrder({
+          items,
+          shippingAddress,
+          expectedDeliveryDate: calculateFutureDate(availableDeliveryDates[deliveryDateIndex!].daysToDeliver),
+          deliveryDateIndex,
+          paymentMethod,
+          itemsPrice,
+          shippingPrice,
+          taxPrice,
+          totalPrice,
+        })
+        if (!res.success) {
+          toast({
+            description: res.message,
+            variant: "destructive",
+          })
+          setIsPayWayProcessing(false)
+          return
+        }
+        const realOrderId = res.data?.orderId
+        const trimmedOrderId = realOrderId ? realOrderId.slice(0, 20) : ""
+        setRealOrderId(trimmedOrderId)
+        setShowPayWayCheckout(true)
+      } catch (error) {
+        toast({
+          description: "Failed to create order",
+          variant: "destructive",
+        })
+        setIsPayWayProcessing(false)
+      }
       return
     }
 
@@ -186,7 +218,14 @@ const CheckoutForm = ({ userEmail, savedCustomerDetails }: CheckoutFormProps) =>
           <div>
             {showPayWayCheckout && paymentMethod === "PayWay" ? (
               <div className="space-y-4">
-                <Button variant="outline" onClick={() => setShowPayWayCheckout(false)} className="w-full">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowPayWayCheckout(false)
+                    setIsPayWayProcessing(false)
+                  }}
+                  className="w-full"
+                >
                   Back to Order Review
                 </Button>
               </div>
@@ -476,10 +515,13 @@ const CheckoutForm = ({ userEmail, savedCustomerDetails }: CheckoutFormProps) =>
                   {showPayWayCheckout && paymentMethod === "PayWay" ? (
                     <div className="w-full">
                       <PayWayCheckout
-                        orderId={`temp${Date.now()}`}
+                        orderId={realOrderId}
                         amount={totalPrice}
                         currency="USD"
-                        onCancel={() => setShowPayWayCheckout(false)}
+                        onCancel={() => {
+                          setShowPayWayCheckout(false)
+                          setIsPayWayProcessing(false)
+                        }}
                       />
                     </div>
                   ) : (

@@ -5,6 +5,7 @@ import { ChevronUp, Facebook, Twitter, Instagram } from "lucide-react"
 import { Button } from "../ui/button"
 import Link from "next/link"
 import { APP_NAME } from "@/lib/constants"
+import Image from "next/image"
 
 interface FooterData {
   email?: string
@@ -126,7 +127,31 @@ export default function Footer() {
               </div>
             </div>
           </div>
+                {/* Payment Methods */}
+            <div className="mt-6">
+              <h3 className="text-gray-900 text-base font-semibold mb-3">We Accept</h3>
+              <div className="flex items-center space-x-1">
+                <div className="relative w-14 h-8 ">
+                  <Image
+                    src="/images/payment-1.png"
+                    alt="Payment Method 1"
+                    fill
+                    className="object-contain"
+                    sizes="80px"
+                  />
+                </div>
 
+                <div className="relative w-14 h-8">
+                  <Image
+                    src="/images/payment-2.png"
+                    alt="Payment Method 2"
+                    fill
+                    className="object-contain"
+                    sizes="80px"
+                  />
+                </div>
+              </div>
+            </div>
           {/* Divider */}
           <div className="border-t border-gray-300 mt-10 pt-4 text-center text-gray-500 text-xs select-none">
             © 2025, {APP_NAME}, Inc. or its affiliates
