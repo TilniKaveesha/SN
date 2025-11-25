@@ -307,6 +307,7 @@ export async function verifyPayWayPayment(orderId: string, tran_id: string) {
       order.paymentResult = {
         id: paymentData.tran_id || tran_id,
         status: "completed",
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         email_address: paymentData.email || order.paymentResult?.email_address || (order.user as any)?.email || "",
         pricePaid: paymentData.amount?.toString() || order.totalPrice.toString() || "0",
       }
@@ -397,6 +398,7 @@ export const calcDeliveryDateAndPrice = async ({
   const { availableDeliveryDates } = await getSetting()
   const itemsPrice = round2(items.reduce((acc, item) => acc + item.price * item.quantity, 0))
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const deliveryDate =
     availableDeliveryDates[deliveryDateIndex === undefined ? availableDeliveryDates.length - 1 : deliveryDateIndex]
   const shippingPrice = 0 //fixed free shipping
