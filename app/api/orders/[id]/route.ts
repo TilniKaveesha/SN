@@ -4,6 +4,15 @@ import { type NextRequest, NextResponse } from "next/server"
 import { payway } from "@/lib/payway"
 
 /**
+ * Interface for the route context object, containing dynamic parameters.
+ */
+interface RouteContext {
+  params: {
+    id: string
+  }
+}
+
+/**
  * GET /api/orders/[id]
  *
  * Retrieve comprehensive order details including PayWay transaction information
@@ -26,12 +35,13 @@ import { payway } from "@/lib/payway"
  */
 export async function GET(
   request: NextRequest,
-  context: { params: { id: string } } // <-- CORRECTED TYPE FOR PARAMS
+  context: RouteContext // Using the defined interface
 ) {
   try {
     await connectToDatabase()
 
-    const { id } = context.params // <-- ACCESSED VIA context.params
+    // Access id through context.params
+    const { id } = context.params
 
     if (!id) {
       return NextResponse.json(
@@ -43,6 +53,7 @@ export async function GET(
       )
     }
 
+    // NOTE: Ensure your Order model and its population fields are correctly typed
     const order = await Order.findById(id).populate("user", "name email")
 
     if (!order) {
@@ -58,6 +69,7 @@ export async function GET(
     let paywayTransactionDetails = null
     if (order.paymentMethod === "PayWay" && order.paymentResult?.id) {
       try {
+        // NOTE: Ensure payway.getTransactionDetails handles the expected type for order.paymentResult.id
         paywayTransactionDetails = await payway.getTransactionDetails(order.paymentResult.id)
       } catch (error) {
         console.error("[v0] Error fetching PayWay details:", error)
