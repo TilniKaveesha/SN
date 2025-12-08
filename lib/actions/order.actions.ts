@@ -24,6 +24,11 @@ export const createOrder = async (clientSideCart: Cart) => {
     if (!session) throw new Error("User not authenticated")
     // recalculate price and delivery date on the server
     const createdOrder = await createOrderFromCart(clientSideCart, session.user.id!)
+
+    if (process.env.EXTERNAL_DEV_WEBHOOK_URL) {
+      await notifyExternalDevWebhook(createdOrder._id.toString(), createdOrder)
+    }
+
     return {
       success: true,
       message: "Order placed successfully",
@@ -618,4 +623,45 @@ async function getTopSalesCategories(date: DateRange, limit = 5) {
   ])
 
   return result
+}
+
+// Helper function to notify external dev webhook
+const notifyExternalDevWebhook = async (orderId: string, order: IOrder) => {
+  try {
+    const externalWebhookUrl = process.env.EXTERNAL_DEV_WEBHOOK_URL
+    if (!externalWebhookUrl) {
+      console.log("[v0] External webhook URL not configured, skipping notification")
+      return
+    }
+
+    const orderNumber = orderId.slice(0, 20).toUpperCase()
+    const payload = {
+      orderId,
+      orderNumber,
+      totalAmount: order.totalPrice,
+      paymentMethod: order.paymentMethod,
+      timestamp: new Date().toISOString(),
+      apiEndpoint: `${process.env.NEXT_PUBLIC_APP_URL}/api/orders/${orderId}`,
+      instructions:
+        "Use the apiEndpoint to fetch complete PayWay payment details including transaction ID, status, amount paid, etc.",
+    }
+
+    const response = await fetch(externalWebhookUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(process.env.EXTERNAL_DEV_API_KEY && {
+          Authorization: `Bearer ${process.env.EXTERNAL_DEV_API_KEY}`,
+        }),
+      },
+      body: JSON.stringify(payload),
+    })
+
+    if (!response.ok) {
+      console.error("[v0] Failed to notify external dev webhook:", response.statusText)
+    }
+  } catch (error) {
+    console.error("[v0] Error notifying external dev:", error)
+    // Don't throw - notification failure should not block order creation
+  }
 }
