@@ -24,11 +24,14 @@ import { payway } from "@/lib/payway"
  * Example CURL request:
  * curl -X GET "https://yourapp.com/api/orders/507f1f77bcf86cd799439011"
  */
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(
+  request: NextRequest,
+  context: { params: { id: string } } // <-- CORRECTED TYPE FOR PARAMS
+) {
   try {
     await connectToDatabase()
 
-    const { id } = params
+    const { id } = context.params // <-- ACCESSED VIA context.params
 
     if (!id) {
       return NextResponse.json(
@@ -36,7 +39,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
           success: false,
           message: "Order ID is required",
         },
-        { status: 400 },
+        { status: 400 }
       )
     }
 
@@ -48,7 +51,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
           success: false,
           message: "Order not found",
         },
-        { status: 404 },
+        { status: 404 }
       )
     }
 
@@ -131,7 +134,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         message: "Order retrieved successfully",
         data: orderData,
       },
-      { status: 200 },
+      { status: 200 }
     )
   } catch (error) {
     console.error("Error retrieving order:", error)
@@ -140,7 +143,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         success: false,
         message: error instanceof Error ? error.message : "Internal server error",
       },
-      { status: 500 },
+      { status: 500 }
     )
   }
 }
