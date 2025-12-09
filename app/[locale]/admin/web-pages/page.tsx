@@ -42,8 +42,8 @@ export default async function WebPageAdminPage() {
           </TableHeader>
           <TableBody>
             {webPages.map((webPage: IWebPage) => (
-              <TableRow key={webPage._id}>
-                <TableCell>{formatId(webPage._id)}</TableCell>
+              <TableRow key={webPage._id.toString()}>
+                <TableCell>{formatId(webPage._id.toString())}</TableCell>
                 <TableCell>{webPage.title}</TableCell>
                 <TableCell>{webPage.slug}</TableCell>
                 <TableCell>{webPage.isPublished ? 'Yes' : 'No'}</TableCell>
@@ -51,7 +51,7 @@ export default async function WebPageAdminPage() {
                   <Button asChild variant='outline' size='sm'>
                     <Link href={`/admin/web-pages/${webPage._id}`}>Edit</Link>
                   </Button>
-                  <DeleteDialog id={webPage._id} action={deleteWebPage} />
+                  <DeleteDialog id={webPage._id.toString()} action={deleteWebPage} />
                 </TableCell>
               </TableRow>
             ))}

@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import type { IOrderInput } from "@/types"
-import { type Document, type Model, model, models, Schema } from "mongoose"
+import { type Document, type Model, model, models, Schema, Types } from "mongoose"
 
 export interface IOrder extends Document, IOrderInput {
-  _id: string
+  _id: Types.ObjectId
   createdAt: Date
   updatedAt: Date
 }

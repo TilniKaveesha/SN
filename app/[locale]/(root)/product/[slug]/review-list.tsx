@@ -74,7 +74,7 @@ export default function ReviewList({
   const { ref, inView } = useInView({ triggerOnce: true })
   const reload = async () => {
     try {
-      const res = await getReviews({ productId: product._id, page: 1 })
+      const res = await getReviews({ productId: product._id.toString(), page: 1 })
       setReviews([...res.data])
       setTotalPages(res.totalPages)
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -89,7 +89,7 @@ export default function ReviewList({
   const loadMoreReviews = async () => {
     if (totalPages !== 0 && page > totalPages) return
     setLoadingReviews(true)
-    const res = await getReviews({ productId: product._id, page })
+    const res = await getReviews({ productId: product._id.toString(), page })
     setLoadingReviews(false)
     setReviews([...reviews, ...res.data])
     setTotalPages(res.totalPages)
@@ -100,7 +100,7 @@ export default function ReviewList({
   useEffect(() => {
     const loadReviews = async () => {
       setLoadingReviews(true)
-      const res = await getReviews({ productId: product._id, page: 1 })
+      const res = await getReviews({ productId: product._id.toString(), page: 1 })
       setReviews([...res.data])
       setTotalPages(res.totalPages)
       setLoadingReviews(false)
@@ -121,7 +121,7 @@ export default function ReviewList({
   const { toast } = useToast()
   const onSubmit: SubmitHandler<CustomerReview> = async (values) => {
     const res = await createUpdateReview({
-      data: { ...values, product: product._id },
+      data: { ...values, product: product._id.toString() },
       path: `/product/${product.slug}`,
     })
     if (!res.success)
@@ -137,10 +137,10 @@ export default function ReviewList({
   }
 
   const handleOpenForm = async () => {
-    form.setValue('product', product._id)
+    form.setValue('product', product._id.toString())
     form.setValue('user', userId!)
     form.setValue('isVerifiedPurchase', true)
-    const review = await getReviewByProductId({ productId: product._id })
+    const review = await getReviewByProductId({ productId: product._id.toString() })
     if (review) {
       form.setValue('title', review.title)
       form.setValue('comment', review.comment)

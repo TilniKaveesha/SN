@@ -1,8 +1,8 @@
 import type { IUserInput } from "@/types"
-import { type Document, type Model, model, models, Schema } from "mongoose"
+import { type Document, type Model, model, models, Schema,Types } from "mongoose"
 
 export interface IUser extends Document, IUserInput {
-  _id: string
+  _id: Types.ObjectId
   createdAt: Date
   updatedAt: Date
   customerDetails?: {

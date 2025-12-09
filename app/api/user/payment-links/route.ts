@@ -1,11 +1,32 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { type NextRequest, NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { PaymentLink } from "@/lib/db/models/payment-link.model"
 import { connectToDatabase } from "@/lib/db"
 import Order from "@/lib/db/models/order.model"
-import type { Document } from "mongoose"
+import { type Types } from "mongoose"
 
-interface PaymentLinkDocument extends Document {
+// Full Mongoose document type
+interface PaymentLinkDocument {
+  _id: Types.ObjectId
+  orderId: string
+  paymentLink: string
+  paymentLinkId: string
+  amount: number
+  currency: string
+  status: string
+  customerInfo?: {
+    name?: string
+    email?: string
+    phone?: string
+  }
+  createdAt: Date
+  expiresAt?: Date
+  paidAt?: Date
+}
+
+// Lean type for .lean()
+interface PaymentLinkLean {
   _id: string
   orderId: string
   paymentLink: string
@@ -23,8 +44,9 @@ interface PaymentLinkDocument extends Document {
   paidAt?: Date
 }
 
-interface OrderDocument extends Document {
-  _id: string
+// Order document type
+interface OrderDocument {
+  _id: Types.ObjectId
   user: string
   orderNumber: string
   totalPrice: number
@@ -36,6 +58,12 @@ interface OrderDocument extends Document {
     email_address?: string
   }
   createdAt: Date
+}
+
+// Lean type for orders
+interface OrderLean {
+  _id: string
+  orderNumber: string
 }
 
 export async function GET(request: NextRequest) {
@@ -53,50 +81,40 @@ export async function GET(request: NextRequest) {
 
     await connectToDatabase()
 
-    // First, get all orders for the current user
-    const userOrders = await Order.find({ user: session.user.id }).select("_id orderNumber").lean<OrderDocument[]>()
+    // Get user's orders
+    const userOrders = await Order.find({ user: session.user.id })
+      .select("_id orderNumber")
+      .lean<OrderLean[]>()
 
     if (userOrders.length === 0) {
       return NextResponse.json({
         success: true,
         paymentLinks: [],
-        pagination: {
-          total: 0,
-          limit,
-          offset,
-          hasMore: false,
-        },
+        pagination: { total: 0, limit, offset, hasMore: false },
       })
     }
 
-    // Extract order IDs
-    const orderIds = userOrders.map((order: OrderDocument) => order._id.toString())
+    const orderIds = userOrders.map((order) => order._id)
 
-    // Build query for payment links
-    const query: Record<string, unknown> = {
-      orderId: { $in: orderIds },
-    }
+    // Build query
+    const query: Record<string, unknown> = { orderId: { $in: orderIds } }
+    if (status) query.status = status
 
-    if (status) {
-      query.status = status
-    }
-
-    // Get payment links for user's orders
+    // Get payment links
     const paymentLinks = await PaymentLink.find(query)
       .sort({ createdAt: -1 })
       .limit(limit)
       .skip(offset)
-      .lean<PaymentLinkDocument[]>()
+      .lean<PaymentLinkLean[]>()
 
-    // Get total count
     const total = await PaymentLink.countDocuments(query)
 
-    // Create a map of order IDs to order numbers for easier lookup
-    const orderMap = new Map(userOrders.map((order: OrderDocument) => [order._id.toString(), order.orderNumber]))
+    // Map orderId → orderNumber
+    const orderMap = new Map(userOrders.map((o) => [o._id, o.orderNumber]))
 
-    // Transform data for frontend
+    // Transform for frontend
     const transformedLinks = paymentLinks.map((link) => ({
-      id: link._id.toString(),
+      id: link._id,
       orderId: link.orderId,
       orderNumber: orderMap.get(link.orderId) || link.orderId,
       paymentLink: link.paymentLink,

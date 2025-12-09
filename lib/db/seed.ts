@@ -115,7 +115,7 @@ const generateOrder = async (
   const items = [
     {
       clientId: generateId(),
-      product: product1._id,
+      product: product1._id.toString(),
       name: product1.name,
       slug: product1.slug,
       quantity: 1,
@@ -126,7 +126,7 @@ const generateOrder = async (
     },
     {
       clientId: generateId(),
-      product: product2._id,
+      product: product2.toString(),
       name: product2.name,
       slug: product2.slug,
       quantity: 2,
@@ -137,7 +137,7 @@ const generateOrder = async (
     },
     {
       clientId: generateId(),
-      product: product3._id,
+      product: product3._id.toString(),
       name: product3.name,
       slug: product3.slug,
       quantity: 3,

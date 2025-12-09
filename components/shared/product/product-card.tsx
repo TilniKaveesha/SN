@@ -105,7 +105,7 @@ const ProductCard = ({
         minimal
         item={{
           clientId: generateId(),
-          product: product._id,
+          product: product._id.toString(),
           size: product.sizes[0],
           color: product.colors[0],
           countInStock: product.countInStock,

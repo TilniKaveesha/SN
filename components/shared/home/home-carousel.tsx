@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 'use client'
 
 import * as React from 'react'
@@ -24,32 +25,32 @@ export function HomeCarousel({ items }: { items: ICarousel[] }) {
       stopOnInteraction: false,
       stopOnMouseEnter: true,
       playOnInit: true,
-    }),
+    })
   )
 
   const [emblaRef, emblaApi] = useEmblaCarousel(
     {
       loop: true,
-      align: "start",
+      align: 'start',
       skipSnaps: false,
       dragFree: false,
     },
-    [autoplayPlugin.current],
+    [autoplayPlugin.current]
   )
 
   const scrollPrev = React.useCallback(() => {
-    if (emblaApi) emblaApi.scrollPrev()
+    emblaApi?.scrollPrev()
   }, [emblaApi])
 
   const scrollNext = React.useCallback(() => {
-    if (emblaApi) emblaApi.scrollNext()
+    emblaApi?.scrollNext()
   }, [emblaApi])
 
   const scrollTo = React.useCallback(
     (index: number) => {
-      if (emblaApi) emblaApi.scrollTo(index)
+      emblaApi?.scrollTo(index)
     },
-    [emblaApi],
+    [emblaApi]
   )
 
   const onSelect = React.useCallback((embla: EmblaCarouselType) => {
@@ -58,49 +59,45 @@ export function HomeCarousel({ items }: { items: ICarousel[] }) {
     setCanScrollNext(embla.canScrollNext())
   }, [])
 
-  React.useEffect(() => {
-    if (!emblaApi) return
-
-    onSelect(emblaApi)
-    emblaApi.on("reInit", onSelect)
-    emblaApi.on("select", onSelect)
-
-    return () => {
-      emblaApi.off("reInit", onSelect)
-      emblaApi.off("select", onSelect)
-    }
-  }, [emblaApi, onSelect])
-
+  // FIXED HOVER AUTOPLAY — use reset() instead of play/stop
   React.useEffect(() => {
     if (!emblaApi) return
 
     const handleMouseEnter = () => {
-      const autoplay = autoplayPlugin.current
-      if (autoplay && isPlaying) {
-        autoplay.stop()
-      }
+      const autoplay = emblaApi.plugins()?.autoplay
+      autoplay?.reset?.() // safe and prevents undefined[0] crash
     }
 
     const handleMouseLeave = () => {
-      const autoplay = autoplayPlugin.current
-      if (autoplay && isPlaying) {
-        autoplay.play()
-      }
+      const autoplay = emblaApi.plugins()?.autoplay
+      autoplay?.reset?.() // safe resume
     }
 
     const emblaNode = emblaApi.rootNode()
-    if (emblaNode) {
-      emblaNode.addEventListener("mouseenter", handleMouseEnter)
-      emblaNode.addEventListener("mouseleave", handleMouseLeave)
+    if (!emblaNode) return
 
-      return () => {
-        emblaNode.removeEventListener("mouseenter", handleMouseEnter)
-        emblaNode.removeEventListener("mouseleave", handleMouseLeave)
-      }
+    emblaNode.addEventListener('mouseenter', handleMouseEnter)
+    emblaNode.addEventListener('mouseleave', handleMouseLeave)
+
+    return () => {
+      emblaNode.removeEventListener('mouseenter', handleMouseEnter)
+      emblaNode.removeEventListener('mouseleave', handleMouseLeave)
     }
-  }, [emblaApi, isPlaying])
-  // We'll pass onSelect to Carousel's onSelect prop (if supported)
-  // Or use emblaApi event listener (adjust depending on your Carousel component API)
+  }, [emblaApi])
+
+  // Sync state on select
+  React.useEffect(() => {
+    if (!emblaApi) return
+
+    onSelect(emblaApi)
+    emblaApi.on('reInit', onSelect)
+    emblaApi.on('select', onSelect)
+
+    return () => {
+      emblaApi.off('reInit', onSelect)
+      emblaApi.off('select', onSelect)
+    }
+  }, [emblaApi, onSelect])
 
   return (
     <div className="relative group">
@@ -112,26 +109,26 @@ export function HomeCarousel({ items }: { items: ICarousel[] }) {
               <Link href={item.url} className="block group/item w-full h-full">
                 <div className="relative aspect-[16/9] md:aspect-[16/6] w-full overflow-hidden">
                   <Image
-                    src={item.image || "/placeholder.svg"}
-                    alt={item.title || "Carousel image"}
+                    src={item.image || '/placeholder.svg'}
+                    alt={item.title || 'Carousel image'}
                     fill
                     className="object-cover transition-transform duration-700 ease-in-out group-hover/item:scale-105"
                     priority={index === 0}
                   />
-                  {/* Gradient overlay */}
+
                   <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent z-10" />
 
-                  {/* Content */}
                   <div className="absolute top-1/2 left-4 md:left-20 -translate-y-1/2 z-20 max-w-[90%] md:max-w-[40%]">
                     <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white drop-shadow-lg mb-4 md:mb-6 animate-in slide-in-from-left-8 duration-700">
-                      {(item.title)}
+                      {item.title}
                     </h2>
+
                     <Button
                       className="bg-tk-accent hover:bg-tk-accent/90 text-white font-medium tracking-wide 
-                                px-8 py-4 md:px-10 md:py-5 text-lg md:text-xl
-                                rounded-none border-2 border-white/30 hover:border-white/50
-                                transition-all duration-300 transform hover:scale-105 hover:shadow-xl
-                                shadow-md animate-in slide-in-from-left-8 delay-200"
+                      px-8 py-4 md:px-10 md:py-5 text-lg md:text-xl
+                      rounded-none border-2 border-white/30 hover:border-white/50
+                      transition-all duration-300 transform hover:scale-105 hover:shadow-xl
+                      shadow-md animate-in slide-in-from-left-8 delay-200"
                       variant="default"
                     >
                       {t(item.buttonCaption)}
@@ -151,10 +148,10 @@ export function HomeCarousel({ items }: { items: ICarousel[] }) {
       <button
         onClick={scrollPrev}
         className="absolute top-1/2 -translate-y-1/2 left-2 md:left-6 z-30 
-                   bg-white/80 hover:bg-white text-black w-12 h-12 rounded-full 
-                   transition-all duration-200 flex items-center justify-center shadow-lg
-                   opacity-0 group-hover:opacity-100 hover:scale-110
-                   disabled:opacity-50 disabled:cursor-not-allowed"
+        bg-white/80 hover:bg-white text-black w-12 h-12 rounded-full 
+        transition-all duration-200 flex items-center justify-center shadow-lg
+        opacity-0 group-hover:opacity-100 hover:scale-110
+        disabled:opacity-50 disabled:cursor-not-allowed"
         aria-label="Previous slide"
         disabled={!canScrollPrev && !emblaApi?.canScrollPrev()}
       >
@@ -166,10 +163,10 @@ export function HomeCarousel({ items }: { items: ICarousel[] }) {
       <button
         onClick={scrollNext}
         className="absolute top-1/2 -translate-y-1/2 right-2 md:right-6 z-30 
-                   bg-white/80 hover:bg-white text-black w-12 h-12 rounded-full 
-                   transition-all duration-200 flex items-center justify-center shadow-lg
-                   opacity-0 group-hover:opacity-100 hover:scale-110
-                   disabled:opacity-50 disabled:cursor-not-allowed"
+        bg-white/80 hover:bg-white text-black w-12 h-12 rounded-full 
+        transition-all duration-200 flex items-center justify-center shadow-lg
+        opacity-0 group-hover:opacity-100 hover:scale-110
+        disabled:opacity-50 disabled:cursor-not-allowed"
         aria-label="Next slide"
         disabled={!canScrollNext && !emblaApi?.canScrollNext()}
       >
@@ -178,14 +175,14 @@ export function HomeCarousel({ items }: { items: ICarousel[] }) {
         </svg>
       </button>
 
-      {/* Dots Indicators */}
+      {/* Dots */}
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex gap-2">
         {items.map((_, index) => (
           <button
             key={index}
             onClick={() => scrollTo(index)}
             className={`w-3 h-3 rounded-full transition-all duration-300 ${
-              index === selectedIndex ? "bg-white scale-110" : "bg-white/50 hover:bg-white/75"
+              index === selectedIndex ? 'bg-white scale-110' : 'bg-white/50 hover:bg-white/75'
             }`}
             aria-label={`Go to slide ${index + 1}`}
           />
