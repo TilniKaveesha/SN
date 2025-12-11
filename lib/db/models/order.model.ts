@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import type { IOrderInput } from "@/types"
 import { type Document, type Model, model, models, Schema, Types } from "mongoose"
+import User from "./user.model"
 
 export interface IOrder extends Document, IOrderInput {
   _id: Types.ObjectId
