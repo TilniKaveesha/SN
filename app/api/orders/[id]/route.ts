@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { connectToDatabase } from "@/lib/db"
 import Order from "@/lib/db/models/order.model"
+import User from "@/lib/db/models/user.model" // Import User model to ensure it's registered before populate()
 import { type NextRequest, NextResponse } from "next/server"
 import mongoose from "mongoose"
 import { payway } from "@/lib/payway"
@@ -16,7 +17,7 @@ export async function GET(
 ) {
   try {
     const { params } = context
-    const { id } = params
+    const { id } = await params
 
     await connectToDatabase()
 
@@ -34,6 +35,9 @@ export async function GET(
         { status: 400 }
       )
     }
+
+    // Access User model to trigger schema registration
+    void User
 
     const order = await Order.findById(id).populate("user", "name email")
 
