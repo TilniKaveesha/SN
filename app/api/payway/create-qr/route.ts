@@ -40,7 +40,6 @@ export async function POST(request: NextRequest) {
       transactionId = transactionId.padEnd(20, "0")
     }*/
 
-
     // 2. Initialize the Client
     const paywayClient = new PaywayClient({
       merchantId: MERCHANT_ID,
@@ -51,7 +50,7 @@ export async function POST(request: NextRequest) {
     // 3. Define URLs for Callback and Return
     const transactionUrls = {
       callback_url: `${CALLBACK_BASE_URL}/api/payway/callback`,
-      return_url: `${CALLBACK_BASE_URL}/checkout/status?reference=${reference}`,
+      return_url: `${CALLBACK_BASE_URL}/api/payway/return-handler?reference=${reference}&order_id=${reference}`,
     }
 
     console.log("[v0] PayWay Create QR - Transaction URLs:", transactionUrls)

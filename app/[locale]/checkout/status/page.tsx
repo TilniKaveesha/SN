@@ -12,6 +12,7 @@ export default function CheckoutStatusPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const reference = searchParams.get("reference")
+  const urlStatus = searchParams.get("status") // Get status from URL
   const { clearCart } = useCartStore()
 
   const [status, setStatus] = useState<"loading" | "success" | "failed" | "error">("loading")
@@ -26,6 +27,10 @@ export default function CheckoutStatusPage() {
           setStatus("error")
           setMessage("No payment reference provided")
           return
+        }
+
+        if (urlStatus === "success") {
+          console.log("[v0] URL indicates success, verifying payment status")
         }
 
         console.log("[v0] Verifying payment for reference:", reference, "attempt:", verificationAttempts + 1)
@@ -59,7 +64,6 @@ export default function CheckoutStatusPage() {
             }
           } catch (checkTxError) {
             console.warn("[v0] Check Transaction API fallback error:", checkTxError)
-            // Continue with original result if fallback fails
           }
         }
 
@@ -97,7 +101,7 @@ export default function CheckoutStatusPage() {
     }
 
     verifyPayment()
-  }, [reference, router, clearCart, verificationAttempts])
+  }, [reference, router, clearCart, verificationAttempts, urlStatus])
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
