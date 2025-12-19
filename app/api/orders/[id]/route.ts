@@ -13,7 +13,7 @@ import { payway } from "@/lib/payway"
  */
 export async function GET(
   request: NextRequest,
-  context: any // ← Cast to 'any' to bypass TS bug in Next.js 15.1.0
+  context: any, // ← Cast to 'any' to bypass TS bug in Next.js 15.1.0
 ) {
   try {
     const { params } = context
@@ -22,18 +22,12 @@ export async function GET(
     await connectToDatabase()
 
     if (!id) {
-      return NextResponse.json(
-        { success: false, message: "Order ID is required" },
-        { status: 400 }
-      )
+      return NextResponse.json({ success: false, message: "Order ID is required" }, { status: 400 })
     }
 
     // Validate ObjectId early
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return NextResponse.json(
-        { success: false, message: "Invalid order ID format" },
-        { status: 400 }
-      )
+      return NextResponse.json({ success: false, message: "Invalid order ID format" }, { status: 400 })
     }
 
     // Access User model to trigger schema registration
@@ -42,19 +36,14 @@ export async function GET(
     const order = await Order.findById(id).populate("user", "name email")
 
     if (!order) {
-      return NextResponse.json(
-        { success: false, message: "Order not found" },
-        { status: 404 }
-      )
+      return NextResponse.json({ success: false, message: "Order not found" }, { status: 404 })
     }
 
     let paywayTransactionDetails = null
 
     if (order.paymentMethod === "PayWay" && order.paymentResult?.id) {
       try {
-        paywayTransactionDetails = await payway.getTransactionDetails(
-          order.paymentResult.id
-        )
+        paywayTransactionDetails = await payway.getTransactionDetails(order.paymentResult.id)
       } catch (error) {
         console.error("[PayWay] Error retrieving transaction:", error)
       }
@@ -87,8 +76,7 @@ export async function GET(
               transaction_ref: paywayTransactionDetails.transaction_ref || null,
 
               payment_status: paywayTransactionDetails.payment_status || null,
-              payment_status_code:
-                paywayTransactionDetails.payment_status_code || null,
+              payment_status_code: paywayTransactionDetails.payment_status_code || null,
 
               total_amount: paywayTransactionDetails.total_amount || null,
               payment_amount: paywayTransactionDetails.payment_amount || null,
@@ -118,6 +106,10 @@ export async function GET(
 
       createdAt: order.createdAt,
       updatedAt: order.updatedAt,
+
+      return_url: `${process.env.NEXT_PUBLIC_SERVER_URL}/checkout/${order._id}`,
+      continue_success_url: `${process.env.NEXT_PUBLIC_SERVER_URL}/checkout/status?reference=${order._id}&status=success`,
+      cancel_url: `${process.env.NEXT_PUBLIC_SERVER_URL}/checkout/${order._id}?payment=failed`,
     }
 
     return NextResponse.json(
@@ -126,7 +118,7 @@ export async function GET(
         message: "Order retrieved successfully",
         data: orderData,
       },
-      { status: 200 }
+      { status: 200 },
     )
   } catch (error) {
     console.error("Error retrieving order:", error)
@@ -136,7 +128,7 @@ export async function GET(
         success: false,
         message: error instanceof Error ? error.message : "Internal server error",
       },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }
