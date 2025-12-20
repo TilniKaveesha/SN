@@ -1,5 +1,7 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { type NextRequest, NextResponse } from "next/server"
+import { verifyToken, generateTokens } from "@/lib/jwt"
+import { connectToDatabase } from "@/lib/db"
+import User from "@/lib/db/models/user.model"
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,18 +11,37 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: "Refresh token is required" }, { status: 400 })
     }
 
-    // TODO: Verify refresh token
-    // TODO: Generate new access token
+    const payload = await verifyToken(refreshToken)
+
+    if (!payload || payload.type !== "refresh") {
+      return NextResponse.json({ success: false, message: "Invalid or expired refresh token" }, { status: 401 })
+    }
+
+    // Verify user still exists
+    await connectToDatabase()
+    const user = await User.findById(payload.userId)
+
+    if (!user) {
+      return NextResponse.json({ success: false, message: "User not found" }, { status: 404 })
+    }
+
+    // Generate new tokens
+    const tokens = await generateTokens({
+      userId: user._id.toString(),
+      email: user.email,
+      role: user.role,
+    })
 
     return NextResponse.json({
       success: true,
       message: "Token refreshed successfully",
       data: {
-        token: "new_jwt_access_token_here",
-        refreshToken: "new_jwt_refresh_token_here",
+        token: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
       },
     })
   } catch (error) {
+    console.error("[v0] Token refresh error:", error)
     return NextResponse.json({ success: false, message: "Token refresh failed" }, { status: 401 })
   }
 }

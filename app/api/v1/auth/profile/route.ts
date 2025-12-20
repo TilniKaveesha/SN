@@ -1,56 +1,47 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { type NextRequest, NextResponse } from "next/server"
+import { verifyToken, generateTokens } from "@/lib/jwt"
+import { connectToDatabase } from "@/lib/db"
+import User from "@/lib/db/models/user.model"
 
-export async function GET(request: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
-    const authHeader = request.headers.get("authorization")
+    const { refreshToken } = await request.json()
 
-    if (!authHeader?.startsWith("Bearer ")) {
-      return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 })
+    if (!refreshToken) {
+      return NextResponse.json({ success: false, message: "Refresh token is required" }, { status: 400 })
     }
 
-    // TODO: Verify JWT token and extract user ID
-    // TODO: Fetch user from database
+    const payload = await verifyToken(refreshToken)
+
+    if (!payload || payload.type !== "refresh") {
+      return NextResponse.json({ success: false, message: "Invalid or expired refresh token" }, { status: 401 })
+    }
+
+    // Verify user still exists
+    await connectToDatabase()
+    const user = await User.findById(payload.userId)
+
+    if (!user) {
+      return NextResponse.json({ success: false, message: "User not found" }, { status: 404 })
+    }
+
+    // Generate new tokens
+    const tokens = await generateTokens({
+      userId: user._id.toString(),
+      email: user.email,
+      role: user.role,
+    })
 
     return NextResponse.json({
       success: true,
+      message: "Token refreshed successfully",
       data: {
-        id: "user_123",
-        email: "user@example.com",
-        name: "John Doe",
-        phone: "+1234567890",
-        createdAt: "2024-01-01T00:00:00Z",
+        token: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
       },
     })
   } catch (error) {
-    return NextResponse.json({ success: false, message: "Failed to fetch profile" }, { status: 500 })
-  }
-}
-
-export async function PUT(request: NextRequest) {
-  try {
-    const authHeader = request.headers.get("authorization")
-
-    if (!authHeader?.startsWith("Bearer ")) {
-      return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 })
-    }
-
-    const { name, phone } = await request.json()
-
-    // TODO: Verify JWT token and extract user ID
-    // TODO: Update user in database
-
-    return NextResponse.json({
-      success: true,
-      message: "Profile updated successfully",
-      data: {
-        id: "user_123",
-        email: "user@example.com",
-        name: name || "John Doe",
-        phone: phone || "+1234567890",
-      },
-    })
-  } catch (error) {
-    return NextResponse.json({ success: false, message: "Failed to update profile" }, { status: 500 })
+    console.error("[v0] Token refresh error:", error)
+    return NextResponse.json({ success: false, message: "Token refresh failed" }, { status: 401 })
   }
 }

@@ -1,5 +1,8 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { type NextRequest, NextResponse } from "next/server"
+import bcrypt from "bcryptjs"
+import { connectToDatabase } from "@/lib/db"
+import User from "@/lib/db/models/user.model"
+import { generateTokens } from "@/lib/jwt"
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,24 +13,46 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: "Email and password are required" }, { status: 400 })
     }
 
-    // TODO: Verify credentials against database
-    // TODO: Generate JWT tokens
+    await connectToDatabase()
+
+    // Find user by email
+    const user = await User.findOne({ email })
+
+    if (!user || !user.password) {
+      return NextResponse.json({ success: false, message: "Invalid email or password" }, { status: 401 })
+    }
+
+    // Verify password
+    const isPasswordValid = await bcrypt.compare(password, user.password)
+
+    if (!isPasswordValid) {
+      return NextResponse.json({ success: false, message: "Invalid email or password" }, { status: 401 })
+    }
+
+    // Generate JWT tokens
+    const { accessToken, refreshToken } = await generateTokens({
+      userId: user._id.toString(),
+      email: user.email,
+      role: user.role,
+    })
 
     return NextResponse.json({
       success: true,
       message: "Login successful",
       data: {
         user: {
-          id: "user_123",
-          email,
-          name: "John Doe",
-          phone: "+1234567890",
+          id: user._id.toString(),
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          image: user.image,
         },
-        token: "jwt_access_token_here",
-        refreshToken: "jwt_refresh_token_here",
+        token: accessToken,
+        refreshToken: refreshToken,
       },
     })
   } catch (error) {
+    console.error("[v0] Login error:", error)
     return NextResponse.json({ success: false, message: "Login failed" }, { status: 500 })
   }
 }
