@@ -1,112 +1,111 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { type NextRequest, NextResponse } from "next/server"
+import type { NextRequest } from "next/server"
+import {
+  successResponse,
+  errorResponse,
+  handleApiError,
+  ApiError,
+} from "@/lib/api/response"
+import { verifyApiAuth } from "@/lib/api/auth-utils"
+import { validatePagination } from "@/lib/api/validation"
 
 export async function GET(request: NextRequest) {
   try {
-    const authHeader = request.headers.get("authorization")
-
-    if (!authHeader?.startsWith("Bearer ")) {
-      return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 })
-    }
+    // Convert null → undefined for strict typing
+    const authHeader = request.headers.get("authorization") ?? undefined
+    const user = await verifyApiAuth(authHeader)
 
     const { searchParams } = new URL(request.url)
-    const page = Number.parseInt(searchParams.get("page") || "1")
-    const limit = Number.parseInt(searchParams.get("limit") || "10")
+
+    const pagination = validatePagination(
+      searchParams.get("page") ?? undefined,
+      searchParams.get("limit") ?? undefined,
+    )
+
+    if ("field" in pagination) {
+      return errorResponse(400, "VALIDATION_ERROR", pagination.message)
+    }
+
+    const { page, limit } = pagination
     const status = searchParams.get("status")
 
-    // TODO: Verify JWT token and extract user ID
-    // TODO: Fetch user's order history from database
+    // TODO: Fetch user's orders from database with filters
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        orders: [
-          {
-            id: "order_123",
-            userId: "user_123",
-            status: "delivered",
-            items: [
-              {
-                productId: "prod_123",
-                name: "Sample Product",
-                quantity: 2,
-                price: 29.99,
-                subtotal: 59.98,
-              },
-            ],
-            subtotal: 59.98,
-            tax: 5.4,
-            shipping: 10.0,
-            total: 75.38,
-            shippingAddress: {
-              street: "123 Main St",
-              city: "New York",
-              state: "NY",
-              zipCode: "10001",
-              country: "USA",
-            },
-            createdAt: "2024-01-01T00:00:00Z",
-            updatedAt: "2024-01-05T00:00:00Z",
-          },
-        ],
-        pagination: {
-          page,
-          limit,
-          total: 25,
-          totalPages: 3,
-        },
-      },
-    })
+    return successResponse(
+      { orders: [] },
+      "Orders fetched successfully",
+      200,
+      {
+        page,
+        limit,
+        total: 0,
+        totalPages: 0,
+      }
+    )
   } catch (error) {
-    return NextResponse.json({ success: false, message: "Failed to fetch orders" }, { status: 500 })
+    return handleApiError(error)
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const authHeader = request.headers.get("authorization")
+    // Convert null → undefined for strict typing
+    const authHeader = request.headers.get("authorization") ?? undefined
+    const user = await verifyApiAuth(authHeader)
 
-    if (!authHeader?.startsWith("Bearer ")) {
-      return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 })
-    }
-
-    const { items, shippingAddress, paymentMethod } = await request.json()
+    const body = await request.json()
+    const { items, shippingAddress, paymentMethod } = body
 
     // Validate required fields
-    if (!items || items.length === 0 || !shippingAddress || !paymentMethod) {
-      return NextResponse.json(
-        { success: false, message: "Items, shipping address, and payment method are required" },
-        { status: 400 },
-      )
+    if (!Array.isArray(items) || items.length === 0) {
+      throw new ApiError(400, "VALIDATION_ERROR", "At least one item is required")
     }
 
-    // TODO: Verify JWT token and extract user ID
-    // TODO: Validate items and calculate totals
-    // TODO: Process payment
-    // TODO: Create order in database
-    // TODO: Clear cart
+    if (!shippingAddress) {
+      throw new ApiError(400, "VALIDATION_ERROR", "Shipping address is required")
+    }
 
-    return NextResponse.json(
+    if (!paymentMethod) {
+      throw new ApiError(400, "VALIDATION_ERROR", "Payment method is required")
+    }
+
+    // Validate address fields
+    const addressFields = ["street", "city", "zipCode", "country"] as const
+    for (const field of addressFields) {
+      if (!shippingAddress[field]) {
+        throw new ApiError(
+          400,
+          "VALIDATION_ERROR",
+          `Address ${field} is required`
+        )
+      }
+    }
+
+    // TODO:
+    // - Verify all items exist and are in stock
+    // - Calculate totals (subtotal, tax, shipping)
+    // - Process payment
+    // - Create order in database
+    // - Clear user's cart
+
+    return successResponse(
       {
-        success: true,
-        message: "Order created successfully",
-        data: {
-          id: "order_new_123",
-          userId: "user_123",
-          status: "pending",
-          items,
-          subtotal: 59.98,
-          tax: 5.4,
-          shipping: 10.0,
-          total: 75.38,
-          shippingAddress,
-          paymentMethod,
-          createdAt: new Date().toISOString(),
-        },
+        id: `order_${Date.now()}`,
+        userId: user.userId,
+        status: "pending",
+        items,
+        subtotal: 0,
+        tax: 0,
+        shipping: 0,
+        total: 0,
+        shippingAddress,
+        paymentMethod,
+        createdAt: new Date().toISOString(),
       },
-      { status: 201 },
+      "Order created successfully",
+      201
     )
   } catch (error) {
-    return NextResponse.json({ success: false, message: "Failed to create order" }, { status: 500 })
+    return handleApiError(error)
   }
 }

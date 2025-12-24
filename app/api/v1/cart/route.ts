@@ -1,93 +1,70 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { type NextRequest, NextResponse } from "next/server"
+import type { NextRequest } from "next/server"
+import { successResponse, handleApiError, ApiError } from "@/lib/api/response"
+import { verifyApiAuth } from "@/lib/api/auth-utils"
+import { validateNumber } from "@/lib/api/validation"
 
 export async function GET(request: NextRequest) {
   try {
-    const authHeader = request.headers.get("authorization")
+    const authHeader = request.headers.get("authorization") ?? undefined
+    const user = await verifyApiAuth(authHeader)
 
-    if (!authHeader?.startsWith("Bearer ")) {
-      return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 })
-    }
+    // TODO: Fetch cart items for user from database
 
-    // TODO: Verify JWT token and extract user ID
-    // TODO: Fetch cart items from database
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        items: [
-          {
-            id: "cart_item_123",
-            productId: "prod_123",
-            product: {
-              name: "Sample Product",
-              price: 29.99,
-              image: "/images/product.jpg",
-            },
-            quantity: 2,
-            subtotal: 59.98,
-          },
-        ],
-        total: 59.98,
-        itemCount: 2,
-      },
+    return successResponse({
+      items: [],
+      total: 0,
+      itemCount: 0,
+      lastUpdated: new Date().toISOString(),
     })
   } catch (error) {
-    return NextResponse.json({ success: false, message: "Failed to fetch cart" }, { status: 500 })
+    return handleApiError(error)
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const authHeader = request.headers.get("authorization")
+    const authHeader = request.headers.get("authorization") ?? undefined
+    const user = await verifyApiAuth(authHeader)
 
-    if (!authHeader?.startsWith("Bearer ")) {
-      return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 })
+    const body = await request.json()
+    const { productId, quantity } = body
+
+    if (!productId) {
+      throw new ApiError(400, "VALIDATION_ERROR", "Product ID is required")
     }
 
-    const { productId, quantity } = await request.json()
-
-    if (!productId || !quantity || quantity < 1) {
-      return NextResponse.json(
-        { success: false, message: "Valid productId and quantity are required" },
-        { status: 400 },
-      )
+    const quantityError = validateNumber(quantity, "quantity", 1)
+    if (quantityError) {
+      throw new ApiError(400, "VALIDATION_ERROR", quantityError.message)
     }
 
-    // TODO: Verify JWT token and extract user ID
     // TODO: Add item to cart in database
 
-    return NextResponse.json({
-      success: true,
-      message: "Item added to cart",
-      data: {
-        id: "cart_item_new_123",
+    return successResponse(
+      {
+        id: `cart_item_${Date.now()}`,
         productId,
         quantity,
         addedAt: new Date().toISOString(),
       },
-    })
+      "Item added to cart",
+      201,
+    )
   } catch (error) {
-    return NextResponse.json({ success: false, message: "Failed to add item to cart" }, { status: 500 })
+    return handleApiError(error)
   }
 }
 
 export async function DELETE(request: NextRequest) {
   try {
-    const authHeader = request.headers.get("authorization")
+    const authHeader = request.headers.get("authorization") ?? undefined
+    const user = await verifyApiAuth(authHeader)
 
-    if (!authHeader?.startsWith("Bearer ")) {
-      return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 })
-    }
-
-    // TODO: Verify JWT token and extract user ID
     // TODO: Clear cart in database
 
-    return NextResponse.json({
-      success: true,
-      message: "Cart cleared successfully",
-    })
+    return successResponse({ cleared: true }, "Cart cleared successfully")
   } catch (error) {
-    return NextResponse.json({ success: false, message: "Failed to clear cart" }, { status: 500 })
+    return handleApiError(error)
   }
 }

@@ -1,8 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { verifyToken } from "@/lib/jwt"
+import { verifyToken, blacklistToken } from "@/lib/jwt"
 
 // In production, maintain a token blacklist in Redis or database
-const tokenBlacklist = new Set<string>()
+// const tokenBlacklist = new Set<string>()
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,11 +19,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: "Invalid token" }, { status: 401 })
     }
 
-    // Add token to blacklist
-    tokenBlacklist.add(token)
-
-    // Note: In production, store blacklisted tokens in Redis with expiration
-    // matching the token's expiration time
+    blacklistToken(token)
 
     return NextResponse.json({
       success: true,
@@ -36,6 +32,6 @@ export async function POST(request: NextRequest) {
 }
 
 // Helper function to check if token is blacklisted
-export function isTokenBlacklisted(token: string): boolean {
-  return tokenBlacklist.has(token)
-}
+// export function isTokenBlacklisted(token: string): boolean {
+//   return tokenBlacklist.has(token)
+// }

@@ -1,80 +1,131 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { type NextRequest, NextResponse } from "next/server"
+import type { NextRequest } from "next/server"
+import {
+  successResponse,
+  errorResponse,
+  handleApiError,
+  ApiError,
+} from "@/lib/api/response"
+import { validatePagination, sanitizeString } from "@/lib/api/validation"
+import { verifyApiAuth, requireAdmin } from "@/lib/api/auth-utils"
+import { checkRateLimit, getRateLimitKey } from "@/lib/api/rate-limit"
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const page = Number.parseInt(searchParams.get("page") || "1")
-    const limit = Number.parseInt(searchParams.get("limit") || "10")
-    const category = searchParams.get("category")
-    const search = searchParams.get("search")
+
+    // Convert null → undefined for strict typing
+    const pagination = validatePagination(
+      searchParams.get("page") ?? undefined,
+      searchParams.get("limit") ?? undefined
+    )
+
+    if ("field" in pagination) {
+      return errorResponse(400, "VALIDATION_ERROR", pagination.message)
+    }
+
+    const { page, limit } = pagination
+    const category = sanitizeString(searchParams.get("category") ?? "")
+    const search = sanitizeString(searchParams.get("search") ?? "")
+
+    // Rate limiting per IP
+    const ip = request.headers.get("x-forwarded-for") ?? "unknown"
+    const rateLimitKey = getRateLimitKey(ip, "/api/v1/products")
+
+    if (!checkRateLimit(rateLimitKey, 1000, 60 * 1000)) {
+      return errorResponse(
+        429,
+        "RATE_LIMIT_EXCEEDED",
+        "Too many requests. Please try again later."
+      )
+    }
 
     // TODO: Fetch products from database with pagination and filters
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        products: [
-          {
-            id: "prod_123",
-            name: "Sample Product",
-            description: "Product description",
-            price: 29.99,
-            category: "Electronics",
-            image: "/images/product.jpg",
-            stock: 100,
-            createdAt: "2024-01-01T00:00:00Z",
-          },
-        ],
-        pagination: {
-          page,
-          limit,
-          total: 100,
-          totalPages: 10,
-        },
+    const mockProducts = [
+      {
+        id: "prod_123",
+        name: "Sample Product",
+        description: "High-quality product",
+        price: 29.99,
+        category: "Electronics",
+        image: "/images/product.jpg",
+        stock: 100,
+        rating: 4.5,
+        reviews: 42,
+        createdAt: "2024-01-01T00:00:00Z",
+        updatedAt: "2024-01-15T00:00:00Z",
       },
-    })
+    ]
+
+    return successResponse(
+      { products: mockProducts },
+      "Products fetched successfully",
+      200,
+      {
+        page,
+        limit,
+        total: 100,
+        totalPages: Math.ceil(100 / limit),
+      }
+    )
   } catch (error) {
-    return NextResponse.json({ success: false, message: "Failed to fetch products" }, { status: 500 })
+    return handleApiError(error)
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const authHeader = request.headers.get("authorization")
+    // Convert null → undefined for strict typing
+    const authHeader = request.headers.get("authorization") ?? undefined
+    const user = await verifyApiAuth(authHeader)
+    requireAdmin(user)
 
-    if (!authHeader?.startsWith("Bearer ")) {
-      return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 })
-    }
-
-    const { name, description, price, category, image, stock } = await request.json()
+    const body = await request.json()
+    const { name, description, price, category, image, stock } = body
 
     // Validate required fields
-    if (!name || !price || !category) {
-      return NextResponse.json({ success: false, message: "Name, price, and category are required" }, { status: 400 })
+    if (!name || typeof name !== "string" || name.trim().length === 0) {
+      throw new ApiError(
+        400,
+        "VALIDATION_ERROR",
+        "Product name is required and must be a string"
+      )
     }
 
-    // TODO: Verify user is admin
+    if (typeof price !== "number" || price <= 0) {
+      throw new ApiError(
+        400,
+        "VALIDATION_ERROR",
+        "Price must be a positive number"
+      )
+    }
+
+    if (!category || typeof category !== "string") {
+      throw new ApiError(400, "VALIDATION_ERROR", "Category is required")
+    }
+
+    if (image && typeof image === "string" && !image.startsWith("http")) {
+      throw new ApiError(400, "VALIDATION_ERROR", "Invalid image URL")
+    }
+
     // TODO: Create product in database
 
-    return NextResponse.json(
-      {
-        success: true,
-        message: "Product created successfully",
-        data: {
-          id: "prod_new_123",
-          name,
-          description,
-          price,
-          category,
-          image,
-          stock: stock || 0,
-          createdAt: new Date().toISOString(),
-        },
-      },
-      { status: 201 },
-    )
+    const newProduct = {
+      id: `prod_${Date.now()}`,
+      name: sanitizeString(name),
+      description: sanitizeString(description ?? ""),
+      price,
+      category: sanitizeString(category),
+      image: image ?? "/placeholder.svg",
+      stock: stock ?? 0,
+      rating: 0,
+      reviews: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+
+    return successResponse(newProduct, "Product created successfully", 201)
   } catch (error) {
-    return NextResponse.json({ success: false, message: "Failed to create product" }, { status: 500 })
+    return handleApiError(error)
   }
 }

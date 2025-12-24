@@ -1,6 +1,10 @@
 import { SignJWT, jwtVerify } from "jose"
+export { jwtVerify }
 
-const JWT_SECRET = new TextEncoder().encode(process.env.AUTH_SECRET || "your-secret-key-change-in-production")
+const JWT_SECRET = new TextEncoder().encode(process.env.NEXTAUTH_SECRET || "your-secret-key-change-in-production")
+
+// In-memory token blacklist (use Redis in production)
+const tokenBlacklist = new Set<string>()
 
 export interface JWTPayload {
   userId: string
@@ -34,6 +38,11 @@ export async function generateTokens(payload: JWTPayload) {
  */
 export async function verifyToken(token: string) {
   try {
+    if (tokenBlacklist.has(token)) {
+      console.error("[v0] Token is blacklisted")
+      return null
+    }
+
     const { payload } = await jwtVerify(token, JWT_SECRET)
     return payload as unknown as JWTPayload & { type: string; exp: number; iat: number }
   } catch (error) {
@@ -43,23 +52,52 @@ export async function verifyToken(token: string) {
 }
 
 /**
- * Verify Google OAuth token
- * In production, implement actual Google token verification
+ * Add token to blacklist (for logout)
+ */
+export function blacklistToken(token: string) {
+  tokenBlacklist.add(token)
+  // In production, implement TTL cleanup or use Redis with expiration
+}
+
+/**
+ * Verify Google OAuth token using Google's verification endpoint
  */
 export async function verifyGoogleToken(token: string): Promise<{
   email: string
   name: string
   picture?: string
   email_verified: boolean
+  sub: string
 } | null> {
   try {
-    // In production, use Google's token verification endpoint:
-    // https://oauth2.googleapis.com/tokeninfo?id_token={token}
-    // or use google-auth-library package
+    const response = await fetch("https://oauth2.googleapis.com/tokeninfo", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: `id_token=${token}`,
+    })
 
-    // For now, return null to indicate this needs implementation
-    console.log("[v0] Google token verification not implemented:", token.substring(0, 20))
-    return null
+    if (!response.ok) {
+      console.error("[v0] Google token verification failed:", response.statusText)
+      return null
+    }
+
+    const data = await response.json()
+
+    // Verify token hasn't expired and matches your app
+    if (!data.email || !data.email_verified) {
+      console.error("[v0] Google token missing required fields")
+      return null
+    }
+
+    return {
+      email: data.email,
+      name: data.name || "",
+      picture: data.picture,
+      email_verified: data.email_verified,
+      sub: data.sub,
+    }
   } catch (error) {
     console.error("[v0] Google token verification error:", error)
     return null

@@ -13,8 +13,12 @@ export async function POST(request: NextRequest) {
 
     const payload = await verifyToken(refreshToken)
 
-    if (!payload || payload.type !== "refresh") {
+    if (!payload) {
       return NextResponse.json({ success: false, message: "Invalid or expired refresh token" }, { status: 401 })
+    }
+
+    if (payload.type !== "refresh") {
+      return NextResponse.json({ success: false, message: "Token is not a refresh token" }, { status: 401 })
     }
 
     // Verify user still exists
@@ -25,23 +29,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: "User not found" }, { status: 404 })
     }
 
-    // Generate new tokens
     const tokens = await generateTokens({
       userId: user._id.toString(),
       email: user.email,
       role: user.role,
     })
 
-    return NextResponse.json({
-      success: true,
-      message: "Token refreshed successfully",
-      data: {
-        token: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
+    return NextResponse.json(
+      {
+        success: true,
+        message: "Token refreshed successfully",
+        data: {
+          token: tokens.accessToken,
+          refreshToken: tokens.refreshToken,
+          expiresIn: 900, // 15 minutes in seconds
+        },
       },
-    })
+      { status: 200 },
+    )
   } catch (error) {
     console.error("[v0] Token refresh error:", error)
-    return NextResponse.json({ success: false, message: "Token refresh failed" }, { status: 401 })
+    return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 })
   }
 }

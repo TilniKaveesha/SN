@@ -1,43 +1,52 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { type NextRequest, NextResponse } from "next/server"
+import type { NextRequest } from "next/server"
+import { successResponse, handleApiError, ApiError } from "@/lib/api/response"
+import { verifyApiAuth } from "@/lib/api/auth-utils"
+import { validateNumber } from "@/lib/api/validation"
 
 export async function POST(request: NextRequest) {
   try {
-    const authHeader = request.headers.get("authorization")
+    // Convert null → undefined for strict typing
+    const authHeader = request.headers.get("authorization") ?? undefined
+    const user = await verifyApiAuth(authHeader)
 
-    if (!authHeader?.startsWith("Bearer ")) {
-      return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 })
-    }
-
-    const { orderId, paymentMethod, amount, cardToken } = await request.json()
+    const body = await request.json()
+    const { orderId, paymentMethod, amount } = body
 
     // Validate required fields
-    if (!orderId || !paymentMethod || !amount) {
-      return NextResponse.json(
-        { success: false, message: "Order ID, payment method, and amount are required" },
-        { status: 400 },
-      )
+    if (!orderId) {
+      throw new ApiError(400, "VALIDATION_ERROR", "Order ID is required")
     }
 
-    // TODO: Verify JWT token and extract user ID
-    // TODO: Validate order exists and belongs to user
-    // TODO: Process payment with payment gateway (Stripe, PayPal, etc.)
-    // TODO: Update order with payment information
+    if (!paymentMethod) {
+      throw new ApiError(400, "VALIDATION_ERROR", "Payment method is required")
+    }
 
-    return NextResponse.json({
-      success: true,
-      message: "Payment processed successfully",
-      data: {
-        paymentId: "pay_123",
+    const amountError = validateNumber(amount, "amount", 0.01)
+    if (amountError) {
+      throw new ApiError(400, "VALIDATION_ERROR", amountError.message)
+    }
+
+    // TODO:
+    // - Verify order exists and belongs to user
+    // - Process payment with payment gateway (Stripe, PayPal, etc.)
+    // - Update order payment status in database
+    // - Send payment confirmation email
+
+    return successResponse(
+      {
+        paymentId: `pay_${Date.now()}`,
         orderId,
         amount,
         status: "completed",
-        transactionId: "txn_123456",
+        transactionId: `txn_${Math.random().toString(36).substring(7)}`,
         paymentMethod,
         processedAt: new Date().toISOString(),
       },
-    })
+      "Payment processed successfully",
+      201
+    )
   } catch (error) {
-    return NextResponse.json({ success: false, message: "Payment processing failed" }, { status: 500 })
+    return handleApiError(error)
   }
 }
