@@ -1,77 +1,128 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-import { type NextRequest, NextResponse } from "next/server"
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import type { NextRequest } from "next/server"
+import { connectToDatabase } from "@/lib/db"
+import Product from "@/lib/db/models/product.model"
+import { verifyToken } from "@/lib/jwt"
+import { validateObjectId, validateProductUpdate } from "@/lib/api/validation"
+import { successResponse, errorResponse } from "@/lib/api/response"
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
 
-    // TODO: Fetch product from database by ID
+    // Validate MongoDB ObjectId
+    if (!validateObjectId(id)) {
+      return errorResponse(400, "VALIDATION_ERROR", "Invalid product ID format")
+    }
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        id,
-        name: "Sample Product",
-        description: "Detailed product description",
-        price: 29.99,
-        category: "Electronics",
-        image: "/images/product.jpg",
-        stock: 100,
-        createdAt: "2024-01-01T00:00:00Z",
-        updatedAt: "2024-01-15T00:00:00Z",
-      },
-    })
+    await connectToDatabase()
+    const product = await Product.findById(id).lean()
+
+    if (!product) {
+      return errorResponse(404, "NOT_FOUND", "Product not found")
+    }
+
+    return successResponse(product, "Product retrieved successfully")
   } catch (error) {
-    return NextResponse.json({ success: false, message: "Product not found" }, { status: 404 })
+    console.error("[v0] GET /api/v1/products/[id] error:", error)
+    return errorResponse(500, "SERVER_ERROR", "Failed to fetch product")
   }
 }
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const authHeader = request.headers.get("authorization")
+    const { id } = await params
 
-    if (!authHeader?.startsWith("Bearer ")) {
-      return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 })
+    // Validate MongoDB ObjectId
+    if (!validateObjectId(id)) {
+      return errorResponse(400, "VALIDATION_ERROR", "Invalid product ID format")
     }
 
-    const { id } = await params
+    // Verify JWT token
+    const authHeader = request.headers.get("authorization")
+    if (!authHeader?.startsWith("Bearer ")) {
+      return errorResponse(401, "UNAUTHORIZED", "Missing or invalid authorization token")
+    }
+
+    const token = authHeader.substring(7)
+    const decoded = await verifyToken(token)
+
+    if (!decoded) {
+      return errorResponse(401, "UNAUTHORIZED", "Invalid or expired token")
+    }
+
+    const userRole = (decoded as any).role
+    if (userRole !== "admin") {
+      return errorResponse(403, "FORBIDDEN", "Only admins can update products")
+    }
+
     const updates = await request.json()
 
-    // TODO: Verify user is admin
-    // TODO: Update product in database
+    // Validate update data
+    const validationError = validateProductUpdate(updates)
+    if (validationError) {
+      return errorResponse(400, "VALIDATION_ERROR", validationError.message)
+    }
 
-    return NextResponse.json({
-      success: true,
-      message: "Product updated successfully",
-      data: {
-        id,
-        ...updates,
-        updatedAt: new Date().toISOString(),
-      },
-    })
+    await connectToDatabase()
+
+    // Check if product exists
+    const product = await Product.findById(id)
+    if (!product) {
+      return errorResponse(404, "NOT_FOUND", "Product not found")
+    }
+
+    // Update product
+    const updatedProduct = await Product.findByIdAndUpdate(id, updates, {
+      new: true,
+      runValidators: true,
+    }).lean()
+
+    return successResponse(updatedProduct, "Product updated successfully")
   } catch (error) {
-    return NextResponse.json({ success: false, message: "Failed to update product" }, { status: 500 })
+    console.error("[v0] PUT /api/v1/products/[id] error:", error)
+    return errorResponse(500, "SERVER_ERROR", "Failed to update product")
   }
 }
 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const authHeader = request.headers.get("authorization")
-
-    if (!authHeader?.startsWith("Bearer ")) {
-      return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 })
-    }
-
     const { id } = await params
 
-    // TODO: Verify user is admin
-    // TODO: Delete product from database
+    // Validate MongoDB ObjectId
+    if (!validateObjectId(id)) {
+      return errorResponse(400, "VALIDATION_ERROR", "Invalid product ID format")
+    }
 
-    return NextResponse.json({
-      success: true,
-      message: "Product deleted successfully",
-    })
+    // Verify JWT token
+    const authHeader = request.headers.get("authorization")
+    if (!authHeader?.startsWith("Bearer ")) {
+      return errorResponse(401, "UNAUTHORIZED", "Missing or invalid authorization token")
+    }
+
+    const token = authHeader.substring(7)
+    const decoded = await verifyToken(token)
+
+    if (!decoded) {
+      return errorResponse(401, "UNAUTHORIZED", "Invalid or expired token")
+    }
+
+    const userRole = (decoded as any).role
+    if (userRole !== "admin") {
+      return errorResponse(403, "FORBIDDEN", "Only admins can delete products")
+    }
+
+    await connectToDatabase()
+
+    const deletedProduct = await Product.findByIdAndDelete(id)
+
+    if (!deletedProduct) {
+      return errorResponse(404, "NOT_FOUND", "Product not found")
+    }
+
+    return successResponse({ id }, "Product deleted successfully")
   } catch (error) {
-    return NextResponse.json({ success: false, message: "Failed to delete product" }, { status: 500 })
+    console.error("[v0] DELETE /api/v1/products/[id] error:", error)
+    return errorResponse(500, "SERVER_ERROR", "Failed to delete product")
   }
 }

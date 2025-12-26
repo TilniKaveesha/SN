@@ -77,3 +77,29 @@ export function validatePagination(page?: string, limit?: string): { page: numbe
 
   return { page: pageNum, limit: limitNum }
 }
+
+export function validateObjectId(id: string): boolean {
+  return /^[0-9a-fA-F]{24}$/.test(id)
+}
+
+export function validateProductUpdate(data: any): ValidationError | null {
+  const errors: ValidationError[] = []
+
+  if (data.name && data.name.trim().length === 0) {
+    errors.push({ field: "name", message: "Product name cannot be empty" })
+  }
+
+  if (data.price && (isNaN(data.price) || data.price < 0)) {
+    errors.push({ field: "price", message: "Product price must be a positive number" })
+  }
+
+  if (data.stock && (isNaN(data.stock) || data.stock < 0)) {
+    errors.push({ field: "stock", message: "Product stock must be a positive number" })
+  }
+
+  if (data.category && data.category.trim().length === 0) {
+    errors.push({ field: "category", message: "Product category cannot be empty" })
+  }
+
+  return errors.length > 0 ? errors[0] : null
+}
