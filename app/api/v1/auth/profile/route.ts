@@ -1,47 +1,111 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { verifyToken, generateTokens } from "@/lib/jwt"
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import type { NextRequest } from "next/server"
+import { verifyToken } from "@/lib/jwt"
 import { connectToDatabase } from "@/lib/db"
 import User from "@/lib/db/models/user.model"
+import { errorResponse, successResponse } from "@/lib/api/response"
 
-export async function POST(request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
-    const { refreshToken } = await request.json()
+    const authHeader = request.headers.get("authorization")
 
-    if (!refreshToken) {
-      return NextResponse.json({ success: false, message: "Refresh token is required" }, { status: 400 })
+    if (!authHeader?.startsWith("Bearer ")) {
+      return errorResponse(401, "UNAUTHORIZED", "No token provided")
     }
 
-    const payload = await verifyToken(refreshToken)
+    const token = authHeader.substring(7)
+    const payload = await verifyToken(token)
 
-    if (!payload || payload.type !== "refresh") {
-      return NextResponse.json({ success: false, message: "Invalid or expired refresh token" }, { status: 401 })
+    if (!payload || (payload as any).type !== "access") {
+      return errorResponse(401, "INVALID_TOKEN", "Invalid or expired token")
     }
 
-    // Verify user still exists
     await connectToDatabase()
-    const user = await User.findById(payload.userId)
+    const user = await User.findById((payload as any).userId)
 
     if (!user) {
-      return NextResponse.json({ success: false, message: "User not found" }, { status: 404 })
+      return errorResponse(404, "USER_NOT_FOUND", "User not found")
     }
 
-    // Generate new tokens
-    const tokens = await generateTokens({
-      userId: user._id.toString(),
-      email: user.email,
-      role: user.role,
-    })
-
-    return NextResponse.json({
-      success: true,
-      message: "Token refreshed successfully",
-      data: {
-        token: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
+    return successResponse(
+      {
+        id: user._id.toString(),
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        image: user.image,
+        emailVerified: user.emailVerified,
+        customerDetails: user.customerDetails,
+        createdAt: user.createdAt?.toISOString(),
       },
-    })
+      "Profile retrieved successfully",
+      200,
+    )
   } catch (error) {
-    console.error("[v0] Token refresh error:", error)
-    return NextResponse.json({ success: false, message: "Token refresh failed" }, { status: 401 })
+    console.error("[v0] Get profile error:", error)
+    return errorResponse(500, "INTERNAL_ERROR", "Failed to fetch profile")
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  try {
+    const authHeader = request.headers.get("authorization")
+
+    if (!authHeader?.startsWith("Bearer ")) {
+      return errorResponse(401, "UNAUTHORIZED", "No token provided")
+    }
+
+    const token = authHeader.substring(7)
+    const payload = await verifyToken(token)
+
+    if (!payload || (payload as any).type !== "access") {
+      return errorResponse(401, "INVALID_TOKEN", "Invalid or expired token")
+    }
+
+    const body = await request.json()
+    const { name, phone, customerDetails } = body
+
+    if (name && typeof name !== "string") {
+      return errorResponse(400, "VALIDATION_ERROR", "Name must be a string")
+    }
+
+    if (phone && typeof phone !== "string") {
+      return errorResponse(400, "VALIDATION_ERROR", "Phone must be a string")
+    }
+
+    await connectToDatabase()
+    const user = await User.findById((payload as any).userId)
+
+    if (!user) {
+      return errorResponse(404, "USER_NOT_FOUND", "User not found")
+    }
+
+    // Update user fields
+    if (name) user.name = name
+    if (phone) {
+      user.customerDetails = user.customerDetails || {}
+      user.customerDetails.phone = phone
+    }
+    if (customerDetails && typeof customerDetails === "object") {
+      user.customerDetails = { ...user.customerDetails, ...customerDetails }
+    }
+
+    await user.save()
+
+    return successResponse(
+      {
+        id: user._id.toString(),
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        image: user.image,
+        customerDetails: user.customerDetails,
+      },
+      "Profile updated successfully",
+      200,
+    )
+  } catch (error) {
+    console.error("[v0] Update profile error:", error)
+    return errorResponse(500, "INTERNAL_ERROR", "Failed to update profile")
   }
 }
