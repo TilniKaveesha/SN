@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { connectToDatabase } from "@/lib/db"
 import Order from "@/lib/db/models/order.model"
+import { sendPurchaseReceipt } from "@/emails"
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
@@ -32,7 +33,7 @@ export async function GET(request: NextRequest) {
     // Find the order
     const order = await Order.findOne({
       $or: [{ _id: orderId }, { _id: reference }, { "paymentResult.id": transactionRef }],
-    })
+    }).populate("user", "email name")
 
     if (!order) {
       console.error("[v0] Order not found for reference:", transactionRef)
@@ -67,6 +68,32 @@ export async function GET(request: NextRequest) {
     const isSuccess = checkTxResult.payment_status_code === 0 || checkTxResult.payment_status === "APPROVED"
 
     if (isSuccess) {
+      console.log("[v0] ✅ Payment successful - completing order")
+
+      if (!order.isPaid) {
+        order.isPaid = true
+        order.paidAt = new Date()
+        order.paymentResult = {
+          id: order.paymentResult?.id || transactionRef,
+          status: "completed",
+          email_address: order.paymentResult?.email_address || (typeof order.user === "object" ? order.user.email : ""),
+          pricePaid: checkTxResult.payment_amount || checkTxResult.total_amount || order.totalPrice.toString(),
+        }
+        await order.save()
+        console.log("[v0] Order marked as paid")
+
+        // Send purchase receipt email
+        try {
+          const userEmail = typeof order.user === "object" ? order.user.email : ""
+          if (userEmail) {
+            await sendPurchaseReceipt({ order })
+            console.log(`[v0] Purchase receipt sent to ${userEmail}`)
+          }
+        } catch (emailError) {
+          console.error("[v0] Email sending failed:", emailError)
+        }
+      }
+
       console.log("[v0] ✅ Payment successful - redirecting to status page")
       return NextResponse.redirect(new URL(`/checkout/status?reference=${transactionRef}&status=success`, request.url))
     } else {
@@ -100,6 +127,45 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  // Some payment gateways send POST instead of GET
-  return GET(request)
+  // Supports both GET and POST for flexibility with different payment gateway callbacks
+  // Example POST body:
+  // {
+  //   "tran_id": "transaction-ref-123",
+  //   "reference": "order-id-456",
+  //   "status": "completed",
+  //   "order_id": "order-id-456"
+  // }
+  // This endpoint verifies the payment with PayWay API and completes the order
+
+  try {
+    const body = await request.json()
+    const { tran_id, reference, order_id, status } = body
+
+    console.log("[v0] PayWay Return Handler POST - Body:", { tran_id, reference, order_id, status })
+
+    // Build a GET-compatible request using the POST body
+    const params = new URLSearchParams({
+      ...(tran_id && { tran_id }),
+      ...(reference && { reference }),
+      ...(order_id && { order_id }),
+      ...(status && { status }),
+    })
+
+    const modifiedRequest = new Request(new URL(`?${params}`, request.url).href, {
+      method: "GET",
+      headers: request.headers,
+    })
+
+    return GET(modifiedRequest as NextRequest)
+  } catch (error) {
+    console.error("[v0] Return handler POST error:", error)
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Failed to process payment return",
+        message: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 400 },
+    )
+  }
 }

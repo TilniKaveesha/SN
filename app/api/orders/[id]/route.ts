@@ -107,6 +107,8 @@ export async function GET(
       createdAt: order.createdAt,
       updatedAt: order.updatedAt,
 
+      return_handler_url: `${process.env.NEXT_PUBLIC_SERVER_URL}/api/payway/return-handler`,
+
       return_url: `${process.env.NEXT_PUBLIC_SERVER_URL}/checkout/${order._id}`,
       continue_success_url: `${process.env.NEXT_PUBLIC_SERVER_URL}/checkout/status?reference=${order._id}&status=success`,
       cancel_url: `${process.env.NEXT_PUBLIC_SERVER_URL}/checkout/${order._id}?payment=failed`,
